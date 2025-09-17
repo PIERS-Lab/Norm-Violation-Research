@@ -1,4 +1,4 @@
-Hello! This github contains all of the custom behaviors and functions for any robots used in the Trust and Teamwork (name WIP) study.
+Hello! This github contains all of the custom behaviors and functions for any robots used in the Delivery Debacles study.
 
 ### A brief study description:
   The robots are expected to be able to participate in a simple game where they "own" an object and bring it to the designated location (specific mechanics are still being developed), 
