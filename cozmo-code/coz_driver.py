@@ -75,4 +75,4 @@ async def test_return(connection):
     await testiee.deliver(goalPose)
     await testiee.reset_position()
     return
-cozmo.connect_with_3dviewer(test_deliver, enable_camera_view=True)
+cozmo.connect_with_3dviewer(test_move, enable_camera_view=True)

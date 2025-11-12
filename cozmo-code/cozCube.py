@@ -8,7 +8,6 @@ from cozmo.util import degrees
 from cozmo.objects import CustomObjectMarkers
 import math
 class coz:
-
     def __init__ (self, robot, cube_Num):
         # robot is a cozmo.conn.cozmoConnection.robot.Robot object
         self._robot = robot

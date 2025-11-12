@@ -1,3 +1,17 @@
 https://github.com/mjyc/ros_cozmo
 
-Cozmo Cube dimensions:  44mm-44mm-44mm
+April tags: https://github.com/AprilRobotics/apriltag?tab=readme-ov-file
+
+Mihir's vector implementation: 
+
+https://github.com/mparekh99/vector-ekf-marker-localization
+
+Cozmo Cube dimensions:  
+    44mm-44mm-44mm
+Tag dimensions: 
+    40mm x 40mm
+Goal dimensions:
+ 100mm x 150 mm x 120 mm (regular walls only go up 4mm)
+
+April tag family:
+ "tag36h11"

@@ -6,7 +6,11 @@
 - [Github](https://github.com/anki/cozmo-python-sdk)
 
 ## Enviornment
-- Have a virtual enviornment setup with python 3.5.6, later versions have a deprecated async function
+- Have a virtual enviornment setup with python 3.5.6, later versions have a deprecated async syntax that are neccecary
+- also be sure that this enviornment's pip version is 20.3.4, this is the newest that will work with 3.5.
+```
+pip install --upgrade pip==20.3.3
+```
 that the Cozmos use, so they won't work on newer python versions.
 -If you you haven't done that before, I recommend pyenv, it allows you to manage both virtual enviornments and python versions
 ###Pyenv
@@ -14,7 +18,7 @@ that the Cozmos use, so they won't work on newer python versions.
 ```
 git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
 ```
--Add the following into your bashrc (or equivalent depending on filesystem
+-Add the following into your bashrc (or equivalent depending on filesystem)
 ```
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
