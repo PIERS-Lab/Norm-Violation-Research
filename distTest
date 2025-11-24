@@ -1,0 +1,6 @@
+import cozmo
+async def drive(connection):
+    robot = connection
+    await robot.drive_straight(cozmo.util.distance_mm(44), cozmo.util.speed_mmps(10)).wait_for_completed()
+        
+cozmo.run_program(drive)
