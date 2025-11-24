@@ -8,6 +8,12 @@ from cozmo.util import degrees
 from cozmo.objects import CustomObjectMarkers
 import math
 class coz:
+    # focal x, focal y, center x, center y
+    cameraParams = {288.87, 288.36 ,155.11, 111.40}
+    # in meters
+    tagSize = 0.05
+    # in mm
+    centerOff = 37.5
     def __init__ (self, robot, cube_Num):
         # robot is a cozmo.conn.cozmoConnection.robot.Robot object
         self._robot = robot

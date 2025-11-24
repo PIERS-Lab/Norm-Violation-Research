@@ -13,5 +13,6 @@ Tag dimensions:
 Goal dimensions:
  100mm x 150 mm x 120 mm (regular walls only go up 4mm)
 
+dist between head camera and center ~35.7 mm
 April tag family:
  "tag36h11"

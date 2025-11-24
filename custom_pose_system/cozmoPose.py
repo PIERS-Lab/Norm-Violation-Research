@@ -1,8 +1,10 @@
 import cozmo
 '''A class to just keep track of cozmo's pose in a custom frame Z, while not needed, is included to interface better with the cozmo API
 measurements are specifically milimeters for position and degrees for rotation.'''
+
+# This may need to become more robust depending on how testing goes
 class cozPose:
-    def __init__ (self, x=0, y=0, z=0, rotation=0):
+    def __init__ (self, x=0.0, y=0.0, z=0.0, rotation=0.0):
         self._x = x
         self._y = y
         self._z = z
