@@ -7,6 +7,7 @@ from cozmo import *
 from cozmo.util import degrees
 from cozmo.objects import CustomObjectMarkers
 import math
+from custom_pose_system.cozmoPose import cozPose
 class coz:
     # focal x, focal y, center x, center y
     cameraParams = {288.87, 288.36 ,155.11, 111.40}
@@ -14,13 +15,21 @@ class coz:
     tagSize = 0.05
     # in mm
     centerOff = 37.5
-    def __init__ (self, robot, cube_Num):
+
+    drivespeedmmps = 100.0
+
+    turnspeedstrtmmps = 100.0
+
+    
+    def __init__ (self, robot, cube_Num, pose = cozPose()):
         # robot is a cozmo.conn.cozmoConnection.robot.Robot object
         self._robot = robot
         self._cubeID = cube_Num
         # from the person's position, goal 0 is far left, goal 1 is middle, goal 2 is far right
         self._goals = None
+        self._pose = pose
         self._alignDistmm = 200
+
     async def create(robot, cube_num):
         self = coz(robot, cube_num)
         self._goals = [await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType01,
