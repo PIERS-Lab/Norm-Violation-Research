@@ -10,7 +10,7 @@ import math
 from custom_pose_system.cozmoPose import cozPose
 class coz:
     # focal x, focal y, center x, center y
-    cameraParams = {288.87, 288.36 ,155.11, 111.40}
+    cameraParams = {288.87, 288.36, 155.11, 111.40}
     # in meters
     tagSize = 0.05
     # in mm
@@ -19,8 +19,9 @@ class coz:
     drivespeedmmps = 100.0
 
     turnspeedstrtmmps = 100.0
-
-    
+    # cozmo's camera readings were consistantly off to the right by ~140 mm, adding this offset in re-adjusts to what's expected
+    # CONSIDERATION: re calibration is a more desireable fix,if there are more problems down the road come try that 
+    cameraxoff = -0.14
     def __init__ (self, robot, cube_Num, pose = cozPose()):
         # robot is a cozmo.conn.cozmoConnection.robot.Robot object
         self._robot = robot

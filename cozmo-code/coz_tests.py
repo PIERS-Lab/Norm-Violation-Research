@@ -1,4 +1,4 @@
-# this driver will test the custom functionality made for the norm violation project
+# this test set will test the custom functionality made for the norm violation project
 # edit the function being called at the bottom to use differant tests!
 from cozCube import coz
 import cozmo

@@ -14,5 +14,16 @@ Goal dimensions:
  100mm x 150 mm x 120 mm (regular walls only go up 4mm)
 
 dist between head camera and center ~35.7 mm
+
+dist between drive wheels ~54 mm
+
+dist btween drive wheels and center ~27mm
 April tag family:
  "tag36h11"
+
+April tag gives pose data in m
+
+axis dimensions, april tag -> cozmo space
+
+AT z (depth) = cozmo y (depth)
+AT x (horizontal diff) = cozmo x
