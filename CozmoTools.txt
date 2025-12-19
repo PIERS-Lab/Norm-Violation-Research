@@ -21,7 +21,7 @@ dist btween drive wheels and center ~27mm
 April tag family:
  "tag36h11"
 
-April tag gives pose data in m
+April tag gives pose data in meters
 
 axis dimensions, april tag -> cozmo space
 
