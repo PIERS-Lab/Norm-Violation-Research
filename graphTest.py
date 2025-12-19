@@ -21,7 +21,7 @@ def main():
     grid.plot(100, 150, 'ro')
     
     # set graph color
-    grid.plot(x, y, 'green', ls = '-.', marker = '')
+    grid.plot(x, y, 'green', ls = '-.', marker = ".")
     # to set title
     grid.set_title("Test code")
 
