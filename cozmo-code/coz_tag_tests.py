@@ -17,6 +17,12 @@ import time
 import numpy
 import math
       
+# poke the camera feed to make sure that it doesen't randomly die in the middle of operation
+async def keep_sdk_alive(robot):
+    while True:
+        robot.world._process_latest_image()
+        await asyncio.sleep(0.01)
+
 
 # test the functionality for Cozmo to see an April tag, and locate it
 async def test_tag(connection):
@@ -260,10 +266,14 @@ def cozDraw(cozGrid, cozmoPosition = cozPose(), goals = (), pathLine = None):
 
 async def approach_and_align_test(connection):
      # turn on interactive mode, so that the graph does not hold up the robot.
+    print("start")
     plt.ion()    
     cozGrid = plt.subplot(1, 1, 1)
     goalPose = cozPose()
     robot = await connection.wait_for_robot()
+    # keep poking the camera thread to make sure that it doesn't give up
+    asyncio.ensure_future(keep_sdk_alive(robot))
+    print("robot connected")
     # robot = cozmo.robot.Robot
     # create an apriltag detector class, which takes the cozmo image and reconizes the included tag
     detector = apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True))
@@ -272,6 +282,7 @@ async def approach_and_align_test(connection):
     await robot.set_head_angle(cozmo.util.degrees(0)).wait_for_completed()
         # feed cozmo's camera data into april tag, then print data
     image = await robot.wait_for(cozmo.camera.EvtNewRawCameraImage, None)
+    print("image found")
         # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
 
         # convert the raw image into greyscale
@@ -284,6 +295,7 @@ async def approach_and_align_test(connection):
 
         # note if more than one april tag is present, then an array is returned
     detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
+    print(detections)
     if(detections):
         Poses = detector.detection_pose(detections[0], camera_data, 0.05, +1)
           
@@ -314,10 +326,16 @@ async def approach_and_align_test(connection):
         ang = math.atan2(goalPose._x, goalPose._y)
           # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
         print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
-        await robot.turn_in_place(cozmo.util.degrees(-math.degrees(ang))).wait_for_completed()
-        await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
-          
+        robot.turn_in_place(cozmo.util.degrees(-math.degrees(ang)))
+        time.sleep(3)
+        # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
+        # await asyncio.sleep(0.05)
+        robot.drive_wheel_motors(100, 100, 0, 0)
+          # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+          # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
+        time.sleep(((dist) + 37.5)/100)
+        robot.stop_all_motors()
 
 
-# cozmo.connect_with_tkviewer(approach_and_align_test) 
-cozmo.connect(approach_and_align_test)  
+#cozmo.connect_with_tkviewer(demo_path_planning) 
+cozmo.connect_with_tkviewer(test_pose_usage)  

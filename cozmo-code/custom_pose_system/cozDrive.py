@@ -1,7 +1,7 @@
 # The lifter issue only exists with go to pose, but if finer control is required, these functions can be re-introduced
 import cozmo
 import time
-
+import math
 
 
 
@@ -32,7 +32,11 @@ def drive_forward(robot, dist_mm, time_sec):
 # this function currently does not work properly, needs tweaking if it is to be re-introduced
 def turn(robot, angle_deg, rw, time_sec):
         print ("Params: Angle", angle_deg, "rw", rw, "turn time", time_sec)
-        speed_mm = float((angle_deg*(2*rw))/(2*time_sec))
+        #convert angle to rads to properly apply equations
+        angle_rad = float(angle_deg*(math.pi/180.0))
+        print(angle_rad)
+
+        speed_mm  = ((angle_rad/time_sec)*rw) * 1.74
         print("Calculated", speed_mm)
         robot.drive_wheel_motors(speed_mm, -speed_mm, 0, 0)
         time.sleep(time_sec)
@@ -47,5 +51,4 @@ async def test_move_functs(connection):
     turn(robot, 180, 27, 1)
     drive_forward(robot, 100, 2)
     turn(robot, -180, 27, 1)
-
-    
+cozmo.connect(test_move_functs)    
