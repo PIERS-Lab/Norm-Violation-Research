@@ -13,15 +13,11 @@ import apriltag
 import PIL
 from matplotlib import pyplot as plt
 from custom_pose_system.cozmoPose import cozPose
+from custom_pose_system import cozDrive as drive
 import time
 import numpy
 import math
       
-# poke the camera feed to make sure that it doesen't randomly die in the middle of operation
-async def keep_sdk_alive(robot):
-    while True:
-        robot.world._process_latest_image()
-        await asyncio.sleep(0.01)
 
 
 # test the functionality for Cozmo to see an April tag, and locate it
@@ -272,7 +268,6 @@ async def approach_and_align_test(connection):
     goalPose = cozPose()
     robot = await connection.wait_for_robot()
     # keep poking the camera thread to make sure that it doesn't give up
-    asyncio.ensure_future(keep_sdk_alive(robot))
     print("robot connected")
     # robot = cozmo.robot.Robot
     # create an apriltag detector class, which takes the cozmo image and reconizes the included tag
@@ -315,7 +310,7 @@ async def approach_and_align_test(connection):
            # update pose, use pose to print in graph
           # cozmo's pose readings were consistantly off to the right by ~130 mm, adding this offset in re-adjusts to what's expected
         ''' note aswell that the z readings are also off 
-          (https://duckduckgo.com/?q=translating+between+refrence+frames+coputer+vision&t=raspberrypi&ia=web~130 ish mm (needs further validation), this is also less than expect, so adjust i[]), 
+          (https://duckduckgo.com/?q=translating+between+refrence+frames+coputer+vision&t=raspberrypi&ia=web ~130 ish mm (needs further validation), this is also less than expect, so adjust i[]), 
           however, this works in our favor as it naturually maskes sure cozmo doesn't try to deliver right on top of the tag. 
           '''
         goalPose._x = Poses[0][0][3] - 0.13
@@ -326,16 +321,23 @@ async def approach_and_align_test(connection):
         ang = math.atan2(goalPose._x, goalPose._y)
           # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
         print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
-        robot.turn_in_place(cozmo.util.degrees(-math.degrees(ang)))
-        time.sleep(3)
+        #drive.turn(robot, ang, 27, 1)
+        await robot.turn_in_place(cozmo.util.degrees(-math.degrees(ang))).wait_for_completed()
         # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
         # await asyncio.sleep(0.05)
         robot.drive_wheel_motors(100, 100, 0, 0)
           # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
           # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
-        time.sleep(((dist) + 37.5)/100)
+        time.sleep(((dist * 1000)-37)/100)
         robot.stop_all_motors()
-
+        await robot.set_lift_height(0).wait_for_completed()
+        time.sleep(1)
+        # robot.drive_wheel_motors(100, 100, 0, 0)
+        #   # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+        #   # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
+        # time.sleep(((dist) + 37.5)/100)
+        robot.stop_all_motors()
+        return
 
 #cozmo.connect_with_tkviewer(demo_path_planning) 
-cozmo.connect_with_tkviewer(test_pose_usage)  
+cozmo.connect_with_tkviewer(approach_and_align_test)  

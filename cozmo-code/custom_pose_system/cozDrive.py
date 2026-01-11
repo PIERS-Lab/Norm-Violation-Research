@@ -50,5 +50,4 @@ async def test_move_functs(connection):
     drive_forward(robot, 100, 2)
     turn(robot, 180, 27, 1)
     drive_forward(robot, 100, 2)
-    turn(robot, -180, 27, 1)
-cozmo.connect(test_move_functs)    
+    turn(robot, -180, 27, 1)    
