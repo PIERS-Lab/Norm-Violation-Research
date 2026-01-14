@@ -262,6 +262,8 @@ def cozDraw(cozGrid, cozmoPosition = cozPose(), goals = (), pathLine = None):
 
 async def approach_and_align_test(connection):
      # turn on interactive mode, so that the graph does not hold up the robot.
+     # apply an offset onto the calculated turn angle to account for the positional difference between the camera and center of the robot
+    TurnAdjust = 10
     print("start")
     plt.ion()    
     cozGrid = plt.subplot(1, 1, 1)
@@ -319,10 +321,13 @@ async def approach_and_align_test(connection):
           # use simple trig, dist = sqrt(x^2+y^2) for dist, theta = tan^-1(delta x/delta y)
         dist = math.sqrt((goalPose._x * goalPose._x) + (goalPose._y * goalPose._y))
         ang = math.atan2(goalPose._x, goalPose._y)
+        if(ang <= 0):
+            TurnAdjust *= -1
+
           # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
         print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
         #drive.turn(robot, ang, 27, 1)
-        await robot.turn_in_place(cozmo.util.degrees(-math.degrees(ang))).wait_for_completed()
+        await robot.turn_in_place(cozmo.util.degrees((-(math.degrees(ang)-TurnAdjust)))).wait_for_completed()
         # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
         # await asyncio.sleep(0.05)
         robot.drive_wheel_motors(100, 100, 0, 0)
