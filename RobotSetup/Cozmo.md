@@ -11,11 +11,19 @@
 - If you you haven't done that before, I recommend pyenv, it allows you to manage both virtual enviornments and python versions fairly easily.
 
 ### Pyenv
-- Clone the repository, this command will automatically install with the virtualenv plugin.
+- Grab the build essantials
+```
+sudo apt install make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev curl git libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+```
+- Install pyenv
+```
+curl -fsSL https://pyenv.run | bash
+```
+- Clone the repository for the virtualenv plugin, the second part of the command places the plugin where it should be.
 ```
 git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
 ```
-- Add the following into your bashrc (or equivalent depending on filesystem)
+- Add the following into your bashrc
 ```
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
