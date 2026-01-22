@@ -323,7 +323,8 @@ async def approach_and_align_test(connection):
         ang = math.atan2(goalPose._x, goalPose._y)
         if(ang <= 0):
             TurnAdjust *= -1
-
+        print("ang: ", math.degrees(ang))
+        print ("adjusted ang", (math.degrees(ang)-TurnAdjust))
           # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
         print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
         #drive.turn(robot, ang, 27, 1)
