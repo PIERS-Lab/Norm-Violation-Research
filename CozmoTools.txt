@@ -26,4 +26,4 @@ April tag gives pose data in meters
 axis dimensions, april tag -> cozmo space
 
 AT z (depth) = cozmo y (depth)
-AT x (horizontal diff) = cozmo x
+AT x (horizontal diff) = cozmo x(lateral)
