@@ -1,5 +1,11 @@
 '''This class serves both as an easy way to run multiple robots, and
 as the vehichle to implement the game, all needed functions and behaviors will be defined here'''
+# next development steps 
+# 1: implement movement commands as member functions  Y
+# 2: integrate camera/tag mechanics with threads (have detector running in the back round and a fucntion to grab latest detections) X
+# 3: integrate "turn in place" so that the detector can still run during a cozmo loop X
+
+# use a member var to store goal path, reset this on every search to effectively clear previous goal search data during runtime
 import asyncio 
 import time
 import cozmo 
@@ -8,6 +14,15 @@ from cozmo.util import degrees
 from cozmo.objects import CustomObjectMarkers
 import math
 from custom_pose_system.cozmoPose import cozPose
+import concurrent.furtures.thread
+import apriltag
+import PIL
+from matplotlib import pyplot as plt
+from custom_pose_system.cozmoPose import cozPose
+from custom_pose_system import cozDrive as drive
+import time
+import numpy
+import math
 class coz:
     # focal x, focal y, center x, center y
     cameraParams = {288.87, 288.36, 155.11, 111.40}
@@ -30,6 +45,13 @@ class coz:
         self._goals = None
         self._pose = pose
         self._alignDistmm = 200
+        # start the camera stream seperate from the viewing window (this is reduntant if run_with_tkviwewr is used)
+        self._robot.camera.image_stream_enabled = True
+        self._detect_pipe = tag_pipe()
+        # intilaze and launch detector thread
+        self._threads = concurrent.futures.ThreadPoolExecutor(4)
+        # create an apriltag detector class, which takes the cozmo image and reconizes the included tag
+        self._threads.submit(self._apriltag_finder, apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe)
 
     async def create(robot, cube_num):
         self = coz(robot, cube_num)
@@ -46,6 +68,13 @@ class coz:
                                               40, 40, True)]
         # set up goal markers Goals are x by x by x (still wip) at their base, a wall is used due to other options being not suitable
         return self
+    
+    def __del__ (self):
+        # signal detector thread to terminate
+        self.detect_pipe.active = False
+        # give threads time to terminate
+        time.sleep(0.5)
+
     async def failmsg(self, detail = "."):
         await self._robot.say_text("I can't do that! " + detail).wait_for_completed()
 
@@ -147,3 +176,157 @@ class coz:
          await self._robot.set_head_angle(degrees(0)).wait_for_completed()
          await self._robot.set_lift_height(0).wait_for_completed() 
          await self._robot.go_to_pose(cozmo.util.Pose(0,0, 0, angle_z=cozmo.util.degrees(0))).wait_for_completed()
+        
+        # + 37.5 cam -> middle of robot
+    # - 20.7 mm cam-> extended lifter
+    # note: the following functions will be implemented into the coz class proper if the methods prove effective
+
+    ''' Some manual movement functions (cozmo does have these at higher levels, 
+    but having finer grain control with low level motor functions will be nice, plus this solves the lifter problem)'''
+    # takes in a distance in mm and travel time in sec, then travels the specified distance in the specified time
+    def cust_drive_forward(self, dist_mm, time_sec):
+            # Note, research wise, manipulating time w be more impactful than speed, cosnider adding a way to just use distance and time
+            # using classic no accel physics here D/T = V
+            # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+            # add 37.5 to the distance to make the refrence point from cozmo's center, thus staying consistant for the differential drive math
+            speed_mm = (dist_mm)/time_sec
+            print ("Calculated:", speed_mm)
+            self._robot.drive_wheel_motors(speed_mm, speed_mm, 0, 0)
+            time.sleep(time_sec)
+            self._robot.stop_all_motors()
+            # wait to make sure the robot has wrapped up it's action before another command is recieved
+            time.sleep(1)
+            # takes in a change in angle and a time to complete the turn in, this is used for turning in place with precision
+            
+
+    ''' takes an angle to rotate by (this is an offset, NOT a destination), distance from either drive wheel to the center of the robot, and the time to do it in
+        the robot will then turn in place by the specified degrees, CW is positive here, this is to make the programming logic easier '''
+    # this function currently does not work properly, needs tweaking if it is to be re-introduced
+    def cust_turn(self, angle_deg, rw, time_sec):
+            print ("Params: Angle", angle_deg, "rw", rw, "turn time", time_sec)
+            #convert angle to rads to properly apply equations
+            angle_rad = float(angle_deg*(math.pi/180.0))
+            print(angle_rad)
+
+            speed_mm  = ((angle_rad/time_sec)*rw) * 1.74
+            print("Calculated", speed_mm)
+            robot.drive_wheel_motors(speed_mm, -speed_mm, 0, 0)
+            time.sleep(time_sec)
+            robot.stop_all_motors()
+            # wait to make sure the robot has wrapped up it's action before another command is recieved
+            time.sleep(1)  
+
+    def _apriltag_finder(self, detector, detectionPipe):
+        while (detectionPipe.active):
+            image = self._robot.wait_for(cozmo.camera.EvtNewRawCameraImage, None)
+            print("image found")
+                # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
+
+                # convert the raw image into greyscale
+            GSImage = image.image.convert("L")
+            upscaled = GSImage.resize((640, 480), resample=PIL.Image.NEAREST)
+
+                #convert greyscale Image into a numpy array
+            GSImage = numpy.array(GSImage, dtype=numpy.uint8)
+                #used the transformed image to detect april tags
+
+                # note if more than one april tag is present, then an array is returned
+            detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
+
+            if(detections and detectionPipe.searching and not detectionPipe.found):
+                # stop searching, store data, and relay to the turn behavior that it's thread can terminate
+                self._robot.stop_all_motors()
+                detectionPipe = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
+                detectionPipe.searching = False
+                detectionPipe.found = True
+
+
+
+        return
+    def look_around(self):
+        self._robot.turn
+        
+    
+async def approach_and_align_test(connection):
+     # turn on interactive mode, so that the graph does not hold up the robot.
+     # apply an offset onto the calculated turn angle to account for the positional difference between the camera and center of the robot
+    TurnAdjust = 10
+
+    print("start")
+    plt.ion()    
+    cozGrid = plt.subplot(1, 1, 1)
+    goalPose = cozPose()
+    robot = await connection.wait_for_robot()
+    # keep poking the camera thread to make sure that it doesn't give up
+    print("robot connected")
+    # robot = cozmo.robot.Robot
+   
+    # focal_x, focal_y, centerx, centery
+    camera_data = {288.87, 288.36,155.11, 111.40}
+    await robot.set_head_angle(cozmo.util.degrees(0)).wait_for_completed()
+        # feed cozmo's camera data into april tag, then print data
+    
+          #Poses use a homegeneous transformation matrix, so
+        '''
+          [ U_X_x, U_Y_x, U_Z_x, p_x ] 
+          [U_X_y, U_Y_y, U_Z_y, p_y  ]
+          [U_X_z, U_Y_z, U_Z_z, p_z  ]
+          [0,     0,     0,     1    ]
+          '''
+          #the top left 3x3 represents rotation as 3 unit vectors
+          #the final column represents positional data
+          #bottom row is there just to make math easier
+        print(Poses[0])
+          # Note: these arrays are column major
+        print("Final pose:\n", "x: ", Poses[0][0][3], "\n", "y: ", Poses[0][1][3], "\n" "z: ", Poses[0][2][3], "\n")
+           # update pose, use pose to print in graph
+          # cozmo's pose readings were consistantly off to the right by ~130 mm, adding this offset in re-adjusts to what's expected
+        ''' note aswell that the z readings are also off 
+          (https://duckduckgo.com/?q=translating+between+refrence+frames+coputer+vision&t=raspberrypi&ia=web ~130 ish mm (needs further validation), this is also less than expect, so adjust i[]), 
+          however, this works in our favor as it naturually maskes sure cozmo doesn't try to deliver right on top of the tag. 
+          '''
+        goalPose._x = Poses[0][0][3] - 0.13
+        goalPose._y = Poses[0][2][3]
+          # plan a straight path from cozmo to the goal pose
+          # use simple trig, dist = sqrt(x^2+y^2) for dist, theta = tan^-1(delta x/delta y)
+        dist = math.sqrt((goalPose._x * goalPose._x) + (goalPose._y * goalPose._y))
+        ang = math.atan2(goalPose._x, goalPose._y)
+        if(ang <= 0):
+            TurnAdjust *= -1
+        print("ang: ", math.degrees(ang))
+        print ("adjusted ang", (math.degrees(ang)-TurnAdjust))
+          # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
+        print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
+        #drive.turn(robot, ang, 27, 1)
+        await robot.turn_in_place(cozmo.util.degrees((-(math.degrees(ang)-TurnAdjust)))).wait_for_completed()
+        # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
+        # await asyncio.sleep(0.05)
+        robot.drive_wheel_motors(100, 100, 0, 0)
+          # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+          # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
+        time.sleep(((dist * 1000)-37)/100)
+        robot.stop_all_motors()
+        await robot.set_lift_height(0).wait_for_completed()
+        time.sleep(1)
+        # robot.drive_wheel_motors(100, 100, 0, 0)
+        #   # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+        #   # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
+        # time.sleep(((dist) + 37.5)/100)
+        robot.stop_all_motors()
+        return
+
+#cozmo.connect_with_tkviewer(demo_path_planning) 
+cozmo.connect_with_tkviewer(approach_and_align_test)  
+
+#flag/info 'pipe' to collect positional goal data from tag thread
+
+class tag_pipe:
+    def __init__ (self):
+        # Used to let tag node know if it neeeds to clear data to avoid error.
+        searching = False
+        # Used to tell turn behavior to stop after locating the goal.
+        found = False
+        # Used to get positional data back to the main.
+        detect = None
+        # Used to signify to the searching thread that it needs to terminate 
+        active = True
