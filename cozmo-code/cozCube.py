@@ -116,22 +116,25 @@ class coz:
         if goalNum < 0 or goalNum > 2:
             self.failmsg("as that goal is not real!")
             return False 
-        
         # look for goal
         # To-Do: make this more robust, 
-        # have cozmo search a little harder (maybe have him move around to account for the poor range of his vision)
-        try:
-            # check if we found the correct goals
-            currBehavior = self._robot.start_behavior(cozmo.behavior.BehaviorTypes.LookAroundInPlace)
-            found = await self._robot.wait_for(cozmo.objects.EvtObjectObserved,  timeout = 40)
-            while (isinstance(found.obj, cozmo.objects.LightCube) or isinstance(found.obj, cozmo.objects.Charger) or 
-                   self._goals[goalNum].object_type != found.obj.object_type):
-                found = await self._robot.wait_for(cozmo.objects.EvtObjectObserved,  timeout = 40)
+        # have cozmo search a little harder (maybe have him move around to account for the poor range of his vision
+        # check if we found the correct goals
+        # prepare flags properly
+        self.detectPipe.searching = True
+        self.detectPipe.found = False
+        self.detectPipe.detect = None
+        ''' 
+        look _around should take control of the main thread until it is done, so
+        it can be assumed that the detect pipe will have relevant info.
+        ''' 
+        
+        self.look_around(self._detect_pipe)
                 
-        except asyncio.TimeoutError:
-            cozmo.behavior.Behavior.stop(currBehavior)
-            await self._robot.say_text("I couldn't find the goal", use_cozmo_voice=True).wait_for_completed()
-            return False 
+        # except asyncio.TimeoutError:
+        #     cozmo.behavior.Behavior.stop(currBehavior)
+        #     await self._robot.say_text("I couldn't find the goal", use_cozmo_voice=True).wait_for_completed()
+        #     return False 
         print("goal found!") 
         cozmo.behavior.Behavior.stop(currBehavior)
         print (found.obj.pose)
@@ -243,8 +246,17 @@ class coz:
 
 
         return
-    def look_around(self):
-        self._robot.turn
+    #need to scheck befor every movement, motors will be stopped by detector
+    def look_around(self, detectionPipe):
+        while (detectionPipe.found == False):
+            self._robot.TurnInPlace(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
+            time.sleep(1)
+            if (detectionPipe.found == False):
+                self._robot.TurnInPlace(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
+                time.sleep(1)
+            if (detectionPipe.found == False):    
+                self._robot.TurnInPlace(cozmo.util.rotation_z_angle(cozmo.util.degrees(-30)), cozmo.util.speed_mmps(10))
+                time.sleep(1)
         
     
 async def approach_and_align_test(connection):
