@@ -6,6 +6,10 @@ as the vehichle to implement the game, all needed functions and behaviors will b
 # 3: integrate "turn in place" so that the detector can still run during a cozmo loop X
 
 # use a member var to store goal path, reset this on every search to effectively clear previous goal search data during runtime
+
+
+
+#Curr Err lies with angle conversion somewhere
 import asyncio 
 import time
 import cozmo 
@@ -14,7 +18,7 @@ from cozmo.util import degrees
 from cozmo.objects import CustomObjectMarkers
 import math
 from custom_pose_system.cozmoPose import cozPose
-import concurrent.furtures.thread
+import concurrent.futures.thread
 import apriltag
 import PIL
 from matplotlib import pyplot as plt
@@ -37,6 +41,8 @@ class coz:
     # cozmo's camera readings were consistantly off to the right by ~140 mm, adding this offset in re-adjusts to what's expected
     # CONSIDERATION: re calibration is a more desireable fix,if there are more problems down the road come try that 
     cameraxoff = -0.14
+    # made to adjust calculated angle away from error (degrees).
+    turnAdjust = 10
     def __init__ (self, robot, cube_Num, pose = cozPose()):
         # robot is a cozmo.conn.cozmoConnection.robot.Robot object
         self._robot = robot
@@ -71,7 +77,7 @@ class coz:
     
     def __del__ (self):
         # signal detector thread to terminate
-        self.detect_pipe.active = False
+        self._detect_pipe.active = False
         # give threads time to terminate
         time.sleep(0.5)
 
@@ -110,7 +116,7 @@ class coz:
         await self._robot.set_lift_height(0).wait_for_completed()
         # back away from cube to avoid messing with it accidentally
         await self._robot.drive_straight(cozmo.util.distance_mm(-100), cozmo.util.speed_mmps(100)).wait_for_completed()
-    # if cozmo fails for any reason, false is returned, other wise the pose of the desired object is returned instead
+    # if cozmo fails for any reason, false is returned, other wise the pose of the desired object (cozmoPose) is returned instead
     async def find_goal(self, goalNum):
         await self._robot.set_head_angle(degrees(0)).wait_for_completed()
         if goalNum < 0 or goalNum > 2:
@@ -121,45 +127,82 @@ class coz:
         # have cozmo search a little harder (maybe have him move around to account for the poor range of his vision
         # check if we found the correct goals
         # prepare flags properly
-        self.detectPipe.searching = True
-        self.detectPipe.found = False
-        self.detectPipe.detect = None
+        self._detect_pipe.searching = True
+        self._detect_pipe.found = False
+        self._detect_pipe.detect = None
         ''' 
         look _around should take control of the main thread until it is done, so
-        it can be assumed that the detect pipe will have relevant info.
+        it can be assumed that the detect pipe will have relevant info. once the fucntion finishes up.
         ''' 
-        
         self.look_around(self._detect_pipe)
-                
+        
+        #note: Implement multi-tag sorting later
+        print("goal found!") 
+        goalPose = cozPose()
+        goalPose._x = self._detect_pipe.detect [0][0][3] - 0.13
+        goalPose._y = self._detect_pipe.detect [0][2][3]
+        return        
         # except asyncio.TimeoutError:
         #     cozmo.behavior.Behavior.stop(currBehavior)
         #     await self._robot.say_text("I couldn't find the goal", use_cozmo_voice=True).wait_for_completed()
         #     return False 
-        print("goal found!") 
-        cozmo.behavior.Behavior.stop(currBehavior)
-        print (found.obj.pose)
-        return found.obj
+        
     
     async def deliver(self, goal):
+        goalPose = self.find_goal(goal)
+        print (goalPose)
         ''' Note that due to the restrictions of the SDK, cozmo will be seeing
         the goals as a wall, so an offset must be applied so cozmo arrives at the correct location
         Also: this current offset will not be finalized until a goal design is complete '''
         # this must be done like this, the API does not like existing poses being edited for some reason
-
-        #calculate the x and y offsets using pythagoreans theorem
-        xAlignOff = self._alignDistmm * math.cos(goal.pose._rotation.angle_z.radians)
-        yAlignOff = self._alignDistmm * math.sin(goal.pose._rotation.angle_z.radians)
-        destSetup = cozmo.util.Pose(goal.pose.position.x - xAlignOff, goal.pose.position.y - yAlignOff, goal.pose.position.z, 
-                               angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
-        # dest = cozmo.util.Pose(xdelivOff, ydelivOff, goal.pose.position.z, 
+        #goal stuff
+        # #calculate the x and y offsets using pythagoreans theorem
+        # xAlignOff = self._alignDistmm * math.cos(goal.pose._rotation.angle_z.radians)
+        # yAlignOff = self._alignDistmm * math.sin(goal.pose._rotation.angle_z.radians)
+        # destSetup = cozmo.util.Pose(goal.pose.position.x - xAlignOff, goal.pose.position.y - yAlignOff, goal.pose.position.z, 
         #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
-        # align Cozmo with the goal entrance
-        await self._robot.go_to_pose(destSetup).wait_for_completed()
-        #await self._robot.go_to_pose(dest).wait_for_completed()
-        #enter goal and deliver
-        await self._robot.drive_straight(cozmo.util.distance_mm(100), cozmo.util.speed_mmps(100)).wait_for_completed()
-        await self.drop_cube()
+        # # dest = cozmo.util.Pose(xdelivOff, ydelivOff, goal.pose.position.z, 
+        # #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
+        # # align Cozmo with the goal entrance
+        # await self._robot.go_to_pose(destSetup).wait_for_completed()
+        # #await self._robot.go_to_pose(dest).wait_for_completed()
+        # #enter goal and deliver
+        # await self._robot.drive_straight(cozmo.util.distance_mm(100), cozmo.util.speed_mmps(100)).wait_for_completed()
+        # await self.drop_cube()
+        
 
+          # plan a straight path from cozmo to the goal pose
+          # use simple trig, dist = sqrt(x^2+y^2) for dist, theta = tan^-1(delta x/delta y)
+        dist = math.sqrt((goalPose._x * goalPose._x) + (goalPose._y * goalPose._y))
+        ang = math.atan2(goalPose._x, goalPose._y)
+        if(ang <= 0):
+            TurnAdjust *= -1
+        print("ang: ", math.degrees(ang))#calculate the x and y offsets using pythagoreans theorem
+        # xAlignOff = self._alignDistmm * math.cos(goal.pose._rotation.angle_z.radians)
+        # yAlignOff = self._alignDistmm * math.sin(goal.pose._rotation.angle_z.radians)
+        # destSetup = cozmo.util.Pose(goal.pose.position.x - xAlignOff, goal.pose.position.y - yAlignOff, goal.pose.position.z, 
+        #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
+        # # dest = cozmo.util.Pose(xdelivOff, ydelivOff, goal.pose.position.z, 
+        # #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
+        # # align Cozmo with the goal entrance
+        # await self._robot.go_to_pose(destSetup).wait_for_completed()
+        # #await self._robot.go_to_pose(dest).wait_for_completed()
+        # #enter goal and deliver
+        # await self._robot.drive_straight(cozmo.util.distance_mm(100), cozmo.util.speed_mmps(100)).wait_for_completed()
+        # await self.drop_cube()
+
+        print ("adjusted ang", (math.degrees(ang)-TurnAdjust))
+          # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
+        print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
+        #drive.turn(robot, ang, 27, 1)
+        await self._robot.turn_in_place(cozmo.util.degrees((-(math.degrees(ang)-TurnAdjust)))).wait_for_completed()
+        # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
+        # await asyncio.sleep(0.05)
+        
+        self.cust_drive_forward(dist, 1)
+        await self._robot.set_lift_height(0).wait_for_completed
+        self.cust_drive_forward(-100, 1)
+        return
     # end point is a cozmo pose
     '''  if return _to_start is set to true cozmo will Ignore the end point argument 
     and just return to his starting position if not given one '''
@@ -192,13 +235,15 @@ class coz:
             # using classic no accel physics here D/T = V
             # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
             # add 37.5 to the distance to make the refrence point from cozmo's center, thus staying consistant for the differential drive math
+          # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+          # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
             speed_mm = (dist_mm)/time_sec
             print ("Calculated:", speed_mm)
             self._robot.drive_wheel_motors(speed_mm, speed_mm, 0, 0)
             time.sleep(time_sec)
             self._robot.stop_all_motors()
             # wait to make sure the robot has wrapped up it's action before another command is recieved
-            time.sleep(1)
+            time.sleep(0.5)
             # takes in a change in angle and a time to complete the turn in, this is used for turning in place with precision
             
 
@@ -210,7 +255,6 @@ class coz:
             #convert angle to rads to properly apply equations
             angle_rad = float(angle_deg*(math.pi/180.0))
             print(angle_rad)
-
             speed_mm  = ((angle_rad/time_sec)*rw) * 1.74
             print("Calculated", speed_mm)
             robot.drive_wheel_motors(speed_mm, -speed_mm, 0, 0)
@@ -242,93 +286,20 @@ class coz:
                 detectionPipe = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
                 detectionPipe.searching = False
                 detectionPipe.found = True
-
-
-
         return
-    #need to scheck befor every movement, motors will be stopped by detector
+    #need to check before every movement, motors will be stopped by detector
     def look_around(self, detectionPipe):
         while (detectionPipe.found == False):
-            self._robot.TurnInPlace(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
+            self._robot.turn_in_place(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
             time.sleep(1)
             if (detectionPipe.found == False):
-                self._robot.TurnInPlace(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
+                self._robot.turn_in_place(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
                 time.sleep(1)
             if (detectionPipe.found == False):    
-                self._robot.TurnInPlace(cozmo.util.rotation_z_angle(cozmo.util.degrees(-30)), cozmo.util.speed_mmps(10))
+                self._robot.turn_in_place(cozmo.util.rotation_z_angle(cozmo.util.degrees(-30)), cozmo.util.speed_mmps(10))
                 time.sleep(1)
-        
+        return detectionPipe.dectect
     
-async def approach_and_align_test(connection):
-     # turn on interactive mode, so that the graph does not hold up the robot.
-     # apply an offset onto the calculated turn angle to account for the positional difference between the camera and center of the robot
-    TurnAdjust = 10
-
-    print("start")
-    plt.ion()    
-    cozGrid = plt.subplot(1, 1, 1)
-    goalPose = cozPose()
-    robot = await connection.wait_for_robot()
-    # keep poking the camera thread to make sure that it doesn't give up
-    print("robot connected")
-    # robot = cozmo.robot.Robot
-   
-    # focal_x, focal_y, centerx, centery
-    camera_data = {288.87, 288.36,155.11, 111.40}
-    await robot.set_head_angle(cozmo.util.degrees(0)).wait_for_completed()
-        # feed cozmo's camera data into april tag, then print data
-    
-          #Poses use a homegeneous transformation matrix, so
-        '''
-          [ U_X_x, U_Y_x, U_Z_x, p_x ] 
-          [U_X_y, U_Y_y, U_Z_y, p_y  ]
-          [U_X_z, U_Y_z, U_Z_z, p_z  ]
-          [0,     0,     0,     1    ]
-          '''
-          #the top left 3x3 represents rotation as 3 unit vectors
-          #the final column represents positional data
-          #bottom row is there just to make math easier
-        print(Poses[0])
-          # Note: these arrays are column major
-        print("Final pose:\n", "x: ", Poses[0][0][3], "\n", "y: ", Poses[0][1][3], "\n" "z: ", Poses[0][2][3], "\n")
-           # update pose, use pose to print in graph
-          # cozmo's pose readings were consistantly off to the right by ~130 mm, adding this offset in re-adjusts to what's expected
-        ''' note aswell that the z readings are also off 
-          (https://duckduckgo.com/?q=translating+between+refrence+frames+coputer+vision&t=raspberrypi&ia=web ~130 ish mm (needs further validation), this is also less than expect, so adjust i[]), 
-          however, this works in our favor as it naturually maskes sure cozmo doesn't try to deliver right on top of the tag. 
-          '''
-        goalPose._x = Poses[0][0][3] - 0.13
-        goalPose._y = Poses[0][2][3]
-          # plan a straight path from cozmo to the goal pose
-          # use simple trig, dist = sqrt(x^2+y^2) for dist, theta = tan^-1(delta x/delta y)
-        dist = math.sqrt((goalPose._x * goalPose._x) + (goalPose._y * goalPose._y))
-        ang = math.atan2(goalPose._x, goalPose._y)
-        if(ang <= 0):
-            TurnAdjust *= -1
-        print("ang: ", math.degrees(ang))
-        print ("adjusted ang", (math.degrees(ang)-TurnAdjust))
-          # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
-        print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
-        #drive.turn(robot, ang, 27, 1)
-        await robot.turn_in_place(cozmo.util.degrees((-(math.degrees(ang)-TurnAdjust)))).wait_for_completed()
-        # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
-        # await asyncio.sleep(0.05)
-        robot.drive_wheel_motors(100, 100, 0, 0)
-          # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
-          # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
-        time.sleep(((dist * 1000)-37)/100)
-        robot.stop_all_motors()
-        await robot.set_lift_height(0).wait_for_completed()
-        time.sleep(1)
-        # robot.drive_wheel_motors(100, 100, 0, 0)
-        #   # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
-        #   # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
-        # time.sleep(((dist) + 37.5)/100)
-        robot.stop_all_motors()
-        return
-
-#cozmo.connect_with_tkviewer(demo_path_planning) 
-cozmo.connect_with_tkviewer(approach_and_align_test)  
 
 #flag/info 'pipe' to collect positional goal data from tag thread
 
