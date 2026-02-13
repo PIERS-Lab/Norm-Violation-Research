@@ -27,3 +27,6 @@ axis dimensions, april tag -> cozmo space
 
 AT z (depth) = cozmo y (depth)
 AT x (horizontal diff) = cozmo x(lateral)
+
+Battery life: cozmo 1
+54 mins

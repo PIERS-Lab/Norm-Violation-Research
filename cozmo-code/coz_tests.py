@@ -1,10 +1,12 @@
 # this test set will test the custom functionality made for the norm violation project
 # edit the function being called at the bottom to use differant tests!
+import concurrent.futures
 from cozCube import coz
 import cozmo
 from cozmo import *
-
+import concurrent
 import asyncio
+import threading
 async def test_find_cube(connection):
     print("testing cube recognition")
     print ("Please input cube ID to assign the cozmo to: ")
@@ -25,7 +27,10 @@ async def test_move(connection):
 
 async def test_find_goal(connection):
     print("Testing Goal Identification with goal 1")
-    testiee = await coz.create(await connection.wait_for_robot(), 1)
+    threadPool = concurrent.futures.ThreadPoolExecutor(3)
+    testiee = await coz.create(await connection.wait_for_robot(), 1, threadPool)
+    threadPool.submit(threading.main_thread())
+
     result = await testiee.find_goal(0)
     if (result != False):
         await testiee._robot.say_text("Goal Found!", play_excited_animation=True, use_cozmo_voice=True).wait_for_completed()

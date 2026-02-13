@@ -13,7 +13,7 @@ import math
 but having finer grain control with low level motor functions will be nice, plus this solves the lifter problem)'''
 # takes in a distance in mm and travel time in sec, then travels the specified distance in the specified time
 def drive_forward(robot, dist_mm, time_sec):
-        # Note, research wise, manipulating time will be more impactful than speed, cosnider adding a way to just use distance and time
+        # Note, research wise, manipulating time w be more impactful than speed, cosnider adding a way to just use distance and time
         # using classic no accel physics here D/T = V
         # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
         # add 37.5 to the distance to make the refrence point from cozmo's center, thus staying consistant for the differential drive math

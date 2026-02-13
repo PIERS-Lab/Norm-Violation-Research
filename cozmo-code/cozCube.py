@@ -43,7 +43,9 @@ class coz:
     cameraxoff = -0.14
     # made to adjust calculated angle away from error (degrees).
     turnAdjust = 10
-    def __init__ (self, robot, cube_Num, pose = cozPose()):
+    # upon intitializaton, a new thread pool executor is created if none is given,
+    # a ll robots should be in the same thread pool
+    def __init__ (self, robot, cube_Num, threadManager, pose = cozPose()):
         # robot is a cozmo.conn.cozmoConnection.robot.Robot object
         self._robot = robot
         self._cubeID = cube_Num
@@ -53,14 +55,15 @@ class coz:
         self._alignDistmm = 200
         # start the camera stream seperate from the viewing window (this is reduntant if run_with_tkviwewr is used)
         self._robot.camera.image_stream_enabled = True
+        print("Starting thread management")
         self._detect_pipe = tag_pipe()
         # intilaze and launch detector thread
-        self._threads = concurrent.futures.ThreadPoolExecutor(4)
+        self._threads = threadManager
         # create an apriltag detector class, which takes the cozmo image and reconizes the included tag
         self._threads.submit(self._apriltag_finder, apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe)
 
-    async def create(robot, cube_num):
-        self = coz(robot, cube_num)
+    async def create(robot, cube_num, threadManager):
+        self = coz(robot, cube_num, threadManager)
         self._goals = [await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType01,
                                               CustomObjectMarkers.Triangles5,
                                               100, 120,
@@ -265,6 +268,7 @@ class coz:
 
     def _apriltag_finder(self, detector, detectionPipe):
         while (detectionPipe.active):
+            print("Hello!")
             image = self._robot.wait_for(cozmo.camera.EvtNewRawCameraImage, None)
             print("image found")
                 # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
@@ -281,6 +285,7 @@ class coz:
             detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
 
             if(detections and detectionPipe.searching and not detectionPipe.found):
+                print("found")
                 # stop searching, store data, and relay to the turn behavior that it's thread can terminate
                 self._robot.stop_all_motors()
                 detectionPipe = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
@@ -290,13 +295,13 @@ class coz:
     #need to check before every movement, motors will be stopped by detector
     def look_around(self, detectionPipe):
         while (detectionPipe.found == False):
-            self._robot.turn_in_place(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
+            self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
             time.sleep(1)
             if (detectionPipe.found == False):
-                self._robot.turn_in_place(cozmo.util.rotation_z_angle(cozmo.util.degrees(50)), cozmo.util.speed_mmps(10))
+                self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
                 time.sleep(1)
             if (detectionPipe.found == False):    
-                self._robot.turn_in_place(cozmo.util.rotation_z_angle(cozmo.util.degrees(-30)), cozmo.util.speed_mmps(10))
+                self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
                 time.sleep(1)
         return detectionPipe.dectect
     
