@@ -14,6 +14,7 @@ import asyncio
 import time
 import cozmo 
 from cozmo import *
+import cozmo.camera
 from cozmo.util import degrees
 from cozmo.objects import CustomObjectMarkers
 import math
@@ -61,7 +62,6 @@ class coz:
         self._threads = threadManager
         # create an apriltag detector class, which takes the cozmo image and reconizes the included tag
         self._threads.submit(self._apriltag_finder, apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe)
-
     async def create(robot, cube_num, threadManager):
         self = coz(robot, cube_num, threadManager)
         self._goals = [await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType01,
@@ -260,16 +260,22 @@ class coz:
             print(angle_rad)
             speed_mm  = ((angle_rad/time_sec)*rw) * 1.74
             print("Calculated", speed_mm)
-            robot.drive_wheel_motors(speed_mm, -speed_mm, 0, 0)
+            self._robot.drive_wheel_motors(speed_mm, -speed_mm, 0, 0)
             time.sleep(time_sec)
-            robot.stop_all_motors()
+            self._robot.stop_all_motors()
             # wait to make sure the robot has wrapped up it's action before another command is recieved
             time.sleep(1)  
-
+    def _tag_launcher(self, detector, detectionPipe):
+        print("PECK")
+        asyncio.run(self._apriltag_finder(detector, detectionPipe))
     def _apriltag_finder(self, detector, detectionPipe):
+        print(detectionPipe.active)
+        # make an event loop so we can use cozmo's api to losten for images
+        loop = asyncio.get_event_loop()
+        asyncio.set_event_loop(loop)
         while (detectionPipe.active):
-            print("Hello!")
-            image = self._robot.wait_for(cozmo.camera.EvtNewRawCameraImage, None)
+            print("Hello! Starting goal finder")
+            image = loop.run_until_complete(self._robot.wait_for(cozmo.camera.EvtNewRawCameraImage, None))
             print("image found")
                 # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
 
@@ -285,12 +291,12 @@ class coz:
             detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
 
             if(detections and detectionPipe.searching and not detectionPipe.found):
-                print("found")
+                print("goal found")
                 # stop searching, store data, and relay to the turn behavior that it's thread can terminate
                 self._robot.stop_all_motors()
                 detectionPipe = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
-                detectionPipe.searching = False
                 detectionPipe.found = True
+        print("finishing up")
         return
     #need to check before every movement, motors will be stopped by detector
     def look_around(self, detectionPipe):
@@ -303,6 +309,8 @@ class coz:
             if (detectionPipe.found == False):    
                 self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
                 time.sleep(1)
+        self._robot.stop_all_motors()
+        detectionPipe.searching = False
         return detectionPipe.dectect
     
 
@@ -311,10 +319,10 @@ class coz:
 class tag_pipe:
     def __init__ (self):
         # Used to let tag node know if it neeeds to clear data to avoid error.
-        searching = False
+        self.searching = False
         # Used to tell turn behavior to stop after locating the goal.
-        found = False
+        self.found = False
         # Used to get positional data back to the main.
-        detect = None
+        self.detect = None
         # Used to signify to the searching thread that it needs to terminate 
-        active = True
+        self.active = True
