@@ -278,17 +278,17 @@ async def approach_and_align_test(connection):
     camera_data = {288.87, 288.36,155.11, 111.40}
     await robot.set_head_angle(cozmo.util.degrees(0)).wait_for_completed()
         # feed cozmo's camera data into april tag, then print data
-    image = await robot.wait_for(cozmo.camera.EvtNewRawCameraImage, None)
+    image = robot.world.latest_image
     print("image found")
         # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
 
         # convert the raw image into greyscale
-    GSImage = image.image.convert("L")
+    GSImage = image.raw_image.convert("L")
     upscaled = GSImage.resize((640, 480), resample=PIL.Image.NEAREST)
 
         #convert greyscale Image into a numpy array
     GSImage = numpy.array(GSImage, dtype=numpy.uint8)
-        #used the transformed image to detect april tags
+        # use the transformed image to detect april tags
 
         # note if more than one april tag is present, then an array is returned
     detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))

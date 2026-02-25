@@ -265,31 +265,22 @@ class coz:
             self._robot.stop_all_motors()
             # wait to make sure the robot has wrapped up it's action before another command is recieved
             time.sleep(1)  
-    def _tag_launcher(self, detector, detectionPipe):
-        print("PECK")
-        asyncio.run(self._apriltag_finder(detector, detectionPipe))
+
     def _apriltag_finder(self, detector, detectionPipe):
         print(detectionPipe.active)
-        # make an event loop so we can use cozmo's api to losten for images
-        loop = asyncio.get_event_loop()
-        asyncio.set_event_loop(loop)
+        print(detectionPipe.searching)
+        print("Hello! Starting goal finder")
         while (detectionPipe.active):
-            print("Hello! Starting goal finder")
-            image = loop.run_until_complete(self._robot.wait_for(cozmo.camera.EvtNewRawCameraImage, None))
-            print("image found")
+            image = self._robot.world.latest_image.raw_image            
                 # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
 
                 # convert the raw image into greyscale
-            GSImage = image.image.convert("L")
+            GSImage = image.convert("L")
+             # upscale the image to improve detection
             upscaled = GSImage.resize((640, 480), resample=PIL.Image.NEAREST)
-
-                #convert greyscale Image into a numpy array
-            GSImage = numpy.array(GSImage, dtype=numpy.uint8)
-                #used the transformed image to detect april tags
-
+                #use the transformed image to detect april tags
                 # note if more than one april tag is present, then an array is returned
             detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
-
             if(detections and detectionPipe.searching and not detectionPipe.found):
                 print("goal found")
                 # stop searching, store data, and relay to the turn behavior that it's thread can terminate
@@ -300,7 +291,10 @@ class coz:
         return
     #need to check before every movement, motors will be stopped by detector
     def look_around(self, detectionPipe):
+        detectionPipe.searching = True
+        print("lookthread: searching = ", detectionPipe.searching)
         while (detectionPipe.found == False):
+            print("detection pipe found status", detectionPipe.found)
             self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
             time.sleep(1)
             if (detectionPipe.found == False):
@@ -326,3 +320,7 @@ class tag_pipe:
         self.detect = None
         # Used to signify to the searching thread that it needs to terminate 
         self.active = True
+    
+async def hello_world():
+    print("hello world!")
+

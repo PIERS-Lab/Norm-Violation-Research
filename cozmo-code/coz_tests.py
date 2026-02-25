@@ -15,7 +15,7 @@ async def test_find_cube(connection):
     result = await testiee.findCube(input())
     if (result):
         testiee._robot.say_text("Cube Found!", play_excited_animation=True,use_cozmo_voice=True).wait_for_completed()
-    #print("i'm out!\n")
+    # print("i'm out!\n")
     return 
 
 async def test_move(connection):
@@ -80,4 +80,5 @@ async def test_return(connection):
     await testiee.deliver(goalPose)
     await testiee.reset_position()
     return
+
 cozmo.connect(test_find_goal)
