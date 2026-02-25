@@ -26,7 +26,11 @@ April tag gives pose data in meters
 axis dimensions, april tag -> cozmo space
 
 AT z (depth) = cozmo y (depth)
-AT x (horizontal diff) = cozmo x(lateral)
+AT x (horizontal diff) = cozmo x (lateral)
 
 Battery life: cozmo 1
 54 mins
+
+factory reset:
+ on charger: lift up and down twice
+ Head up and down twice
