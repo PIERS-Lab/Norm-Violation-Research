@@ -28,6 +28,7 @@ from custom_pose_system import cozDrive as drive
 import time
 import numpy
 import math
+import threading
 class coz:
     # focal x, focal y, center x, center y
     cameraParams = {288.87, 288.36, 155.11, 111.40}
@@ -61,7 +62,11 @@ class coz:
         # intilaze and launch detector thread
         self._threads = threadManager
         # create an apriltag detector class, which takes the cozmo image and reconizes the included tag
-        self._threads.submit(self._apriltag_finder, apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe)
+        time.sleep(0.5)
+        finder = threading.Thread(target = self._apriltag_finder, args = (apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe))
+        finder.daemon=True
+        finder.start()
+        #self._threads.submit(self._apriltag_finder, apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe)
     async def create(robot, cube_num, threadManager):
         self = coz(robot, cube_num, threadManager)
         self._goals = [await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType01,
@@ -137,7 +142,7 @@ class coz:
         look _around should take control of the main thread until it is done, so
         it can be assumed that the detect pipe will have relevant info. once the fucntion finishes up.
         ''' 
-        self.look_around(self._detect_pipe)
+        self.look_around_for_goal(self._detect_pipe)
         
         #note: Implement multi-tag sorting later
         print("goal found!") 
@@ -266,11 +271,21 @@ class coz:
             # wait to make sure the robot has wrapped up it's action before another command is recieved
             time.sleep(1)  
 
-    def _apriltag_finder(self, detector, detectionPipe):
-        print(detectionPipe.active)
-        print(detectionPipe.searching)
-        print("Hello! Starting goal finder")
-        while (detectionPipe.active):
+    def _apriltag_finder(self, detector, detect_pipe):
+
+        print(detect_pipe)
+        print("finder: active", detect_pipe.active)
+        print("fidner: search", detect_pipe.searching)
+        print("fidner: found", detect_pipe.found)
+        while (detect_pipe.active):
+            # print("fidner: search", detect_pipe.searching)
+            # print("fidner: found", detect_pipe.found
+            #print("detection pipe search status", detect_pipe.found)
+            #print("fidner: search", detect_pipe.searching)
+            # wait for the image stream to be fully active
+            while(not self._robot.world.latest_image):
+                print("inactive...")
+                time.sleep(0.5)
             image = self._robot.world.latest_image.raw_image            
                 # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
 
@@ -281,31 +296,33 @@ class coz:
                 #use the transformed image to detect april tags
                 # note if more than one april tag is present, then an array is returned
             detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
-            if(detections and detectionPipe.searching and not detectionPipe.found):
+            print(detections)
+            if(detections and self._detect_pipe.searching and not self._detect_pipe.found):
                 print("goal found")
                 # stop searching, store data, and relay to the turn behavior that it's thread can terminate
                 self._robot.stop_all_motors()
-                detectionPipe = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
-                detectionPipe.found = True
+                detect_pipe.detect = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
+                detect_pipe.found = True
         print("finishing up")
         return
-    #need to check before every movement, motors will be stopped by detector
-    def look_around(self, detectionPipe):
-        detectionPipe.searching = True
-        print("lookthread: searching = ", detectionPipe.searching)
-        while (detectionPipe.found == False):
-            print("detection pipe found status", detectionPipe.found)
+    #Specific behavior to allow cozmo to search for the goals using apriltag, normal cozmo behaviors should be used for other behaviors
+    def look_around_for_goal(self, detect_pipe):
+        print(detect_pipe)
+        detect_pipe.searching = True
+        #print("lookthread: searching = ", detect_pipe.searching)
+        while (detect_pipe.found == False):
+            #print("detection pipe found status", detect_pipe.found)
             self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
             time.sleep(1)
-            if (detectionPipe.found == False):
+            if (detect_pipe.found == False):
                 self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
                 time.sleep(1)
-            if (detectionPipe.found == False):    
+            if (detect_pipe.found == False):    
                 self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
                 time.sleep(1)
         self._robot.stop_all_motors()
-        detectionPipe.searching = False
-        return detectionPipe.dectect
+        detect_pipe.searching = False
+        return detect_pipe._detect_pipe.dectect
     
 
 #flag/info 'pipe' to collect positional goal data from tag thread
