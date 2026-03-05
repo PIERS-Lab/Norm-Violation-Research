@@ -57,6 +57,7 @@ class coz:
         self._alignDistmm = 200
         # start the camera stream seperate from the viewing window (this is reduntant if run_with_tkviwewr is used)
         self._robot.camera.image_stream_enabled = True
+        self._robot.add_event_handler(cozmo.world.EvtNewCameraImage, self.grabImg)
         print("Starting thread management")
         self._detect_pipe = tag_pipe()
         # intilaze and launch detector thread
@@ -286,17 +287,20 @@ class coz:
             while(not self._robot.world.latest_image):
                 print("inactive...")
                 time.sleep(0.5)
-            image = self._robot.world.latest_image.raw_image            
-                # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
 
+            # wait for new image
+            while(not self._detect_pipe.imgNew):
+                time.sleep(0.5)            
+                # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
+ 
                 # convert the raw image into greyscale
-            GSImage = image.convert("L")
+            GSImage = self._detect_pipe.image.convert("L")
              # upscale the image to improve detection
             upscaled = GSImage.resize((640, 480), resample=PIL.Image.NEAREST)
                 #use the transformed image to detect april tags
                 # note if more than one april tag is present, then an array is returned
             detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
-            print(detections)
+            #print(detections)
             if(detections and self._detect_pipe.searching and not self._detect_pipe.found):
                 print("goal found")
                 # stop searching, store data, and relay to the turn behavior that it's thread can terminate
@@ -313,16 +317,23 @@ class coz:
         while (detect_pipe.found == False):
             #print("detection pipe found status", detect_pipe.found)
             self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
-            time.sleep(1)
+            time.sleep(5)
             if (detect_pipe.found == False):
                 self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
-                time.sleep(1)
+                time.sleep(5)
             if (detect_pipe.found == False):    
                 self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
-                time.sleep(1)
+                time.sleep(5)
         self._robot.stop_all_motors()
         detect_pipe.searching = False
-        return detect_pipe._detect_pipe.dectect
+        return detect_pipe.detect
+    #call back for Cozmo image collection
+    def grabImg(self, image):
+        print("got one!")
+        self._detect_pipe.image = image
+        self._detect_pipe.imageNew = True
+
+    
     
 
 #flag/info 'pipe' to collect positional goal data from tag thread
@@ -337,7 +348,11 @@ class tag_pipe:
         self.detect = None
         # Used to signify to the searching thread that it needs to terminate 
         self.active = True
+        #stores the most recent cozmo image 
+        self.image = None
+        self.imgNew = False
     
 async def hello_world():
     print("hello world!")
+
 
