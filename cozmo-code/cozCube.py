@@ -57,7 +57,7 @@ class coz:
         self._alignDistmm = 200
         # start the camera stream seperate from the viewing window (this is reduntant if run_with_tkviwewr is used)
         self._robot.camera.image_stream_enabled = True
-        self._robot.add_event_handler(cozmo.world.EvtNewCameraImage, self.grabImg)
+        self._robot.add_event_handler(cozmo.camera.EvtNewRawCameraImage, self.grabImg)
         print("Starting thread management")
         self._detect_pipe = tag_pipe()
         # intilaze and launch detector thread
@@ -143,14 +143,17 @@ class coz:
         look _around should take control of the main thread until it is done, so
         it can be assumed that the detect pipe will have relevant info. once the fucntion finishes up.
         ''' 
-        self.look_around_for_goal(self._detect_pipe)
+
+        # let the robot find the goal before processing a pose
+        await self.look_around_for_goal(self._detect_pipe)
         
         #note: Implement multi-tag sorting later
         print("goal found!") 
         goalPose = cozPose()
         goalPose._x = self._detect_pipe.detect [0][0][3] - 0.13
         goalPose._y = self._detect_pipe.detect [0][2][3]
-        return        
+        
+        return goalPose 
         # except asyncio.TimeoutError:
         #     cozmo.behavior.Behavior.stop(currBehavior)
         #     await self._robot.say_text("I couldn't find the goal", use_cozmo_voice=True).wait_for_completed()
@@ -273,12 +276,12 @@ class coz:
             time.sleep(1)  
 
     def _apriltag_finder(self, detector, detect_pipe):
-
         print(detect_pipe)
         print("finder: active", detect_pipe.active)
         print("fidner: search", detect_pipe.searching)
         print("fidner: found", detect_pipe.found)
         while (detect_pipe.active):
+            time.sleep(0.2) 
             # print("fidner: search", detect_pipe.searching)
             # print("fidner: found", detect_pipe.found
             #print("detection pipe search status", detect_pipe.found)
@@ -286,52 +289,58 @@ class coz:
             # wait for the image stream to be fully active
             while(not self._robot.world.latest_image):
                 print("inactive...")
-                time.sleep(0.5)
+                time.sleep(0.1)
 
-            # wait for new image
-            while(not self._detect_pipe.imgNew):
-                time.sleep(0.5)            
+            # wait for image
+            with(self._detect_pipe.cond):
+                self._detect_pipe.cond.wait()          
                 # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
- 
+                print(self._detect_pipe.image)
                 # convert the raw image into greyscale
-            GSImage = self._detect_pipe.image.convert("L")
-             # upscale the image to improve detection
-            upscaled = GSImage.resize((640, 480), resample=PIL.Image.NEAREST)
+                GSImage = self._detect_pipe.image.convert("L")
+                # upscale the image to improve detection
+                upscaled = GSImage.resize((640, 480), resample=PIL.Image.NEAREST)
                 #use the transformed image to detect april tags
                 # note if more than one april tag is present, then an array is returned
-            detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
-            #print(detections)
-            if(detections and self._detect_pipe.searching and not self._detect_pipe.found):
-                print("goal found")
-                # stop searching, store data, and relay to the turn behavior that it's thread can terminate
-                self._robot.stop_all_motors()
-                detect_pipe.detect = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
-                detect_pipe.found = True
+                detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
+                #print(detections)
+                if(detections and self._detect_pipe.searching and not self._detect_pipe.found):
+                    print("goal found")
+                    # stop searching, store data, and relay to the turn behavior that it's thread can terminate
+                    self._robot.stop_all_motors()
+                    detect_pipe.detect = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
+                    detect_pipe.found = True
         print("finishing up")
         return
     #Specific behavior to allow cozmo to search for the goals using apriltag, normal cozmo behaviors should be used for other behaviors
-    def look_around_for_goal(self, detect_pipe):
+    # this particular function being async allows an easy way to wait for the detection without complicating the info pipe.
+    async def look_around_for_goal(self, detect_pipe):
         print(detect_pipe)
         detect_pipe.searching = True
         #print("lookthread: searching = ", detect_pipe.searching)
         while (detect_pipe.found == False):
             #print("detection pipe found status", detect_pipe.found)
             self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
-            time.sleep(5)
+            await asyncio.sleep(1)
             if (detect_pipe.found == False):
                 self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
-                time.sleep(5)
+            await  asyncio.sleep(1)
             if (detect_pipe.found == False):    
                 self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
-                time.sleep(5)
+            await  asyncio.sleep(1)
+
         self._robot.stop_all_motors()
         detect_pipe.searching = False
         return detect_pipe.detect
     #call back for Cozmo image collection
-    def grabImg(self, image):
-        print("got one!")
-        self._detect_pipe.image = image
-        self._detect_pipe.imageNew = True
+    # Kw allows for any extra keyword args to be passed without crashing
+    def grabImg(self, evt, **kwargs):
+        #print("got one!")
+        with self._detect_pipe.cond:
+            self._detect_pipe.image = evt.image
+            self._detect_pipe.imageNew = True
+            # let the apriltag detector know that a new frame has come in
+            self._detect_pipe.cond.notify()
 
     
     
@@ -350,7 +359,11 @@ class tag_pipe:
         self.active = True
         #stores the most recent cozmo image 
         self.image = None
+
         self.imgNew = False
+
+        #used to make sure that the image stream isn't getting blocked
+        self.cond = threading.Condition()
     
 async def hello_world():
     print("hello world!")
