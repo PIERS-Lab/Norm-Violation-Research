@@ -159,63 +159,37 @@ class coz:
         #     await self._robot.say_text("I couldn't find the goal", use_cozmo_voice=True).wait_for_completed()
         #     return False 
         
-    
-    async def deliver(self, goal):
-        goalPose = self.find_goal(goal)
-        print (goalPose)
-        ''' Note that due to the restrictions of the SDK, cozmo will be seeing
-        the goals as a wall, so an offset must be applied so cozmo arrives at the correct location
-        Also: this current offset will not be finalized until a goal design is complete '''
-        # this must be done like this, the API does not like existing poses being edited for some reason
-        #goal stuff
-        # #calculate the x and y offsets using pythagoreans theorem
-        # xAlignOff = self._alignDistmm * math.cos(goal.pose._rotation.angle_z.radians)
-        # yAlignOff = self._alignDistmm * math.sin(goal.pose._rotation.angle_z.radians)
-        # destSetup = cozmo.util.Pose(goal.pose.position.x - xAlignOff, goal.pose.position.y - yAlignOff, goal.pose.position.z, 
-        #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
-        # # dest = cozmo.util.Pose(xdelivOff, ydelivOff, goal.pose.position.z, 
-        # #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
-        # # align Cozmo with the goal entrance
-        # await self._robot.go_to_pose(destSetup).wait_for_completed()
-        # #await self._robot.go_to_pose(dest).wait_for_completed()
-        # #enter goal and deliver
-        # await self._robot.drive_straight(cozmo.util.distance_mm(100), cozmo.util.speed_mmps(100)).wait_for_completed()
-        # await self.drop_cube()
-        
-
-          # plan a straight path from cozmo to the goal pose
-          # use simple trig, dist = sqrt(x^2+y^2) for dist, theta = tan^-1(delta x/delta y)
+    # This is effectively a go_to_Pose for apriltag points and can be used as such
+    async def deliver(self, goalPose):
+        print(goalPose)
         dist = math.sqrt((goalPose._x * goalPose._x) + (goalPose._y * goalPose._y))
         ang = math.atan2(goalPose._x, goalPose._y)
         if(ang <= 0):
-            TurnAdjust *= -1
-        print("ang: ", math.degrees(ang))#calculate the x and y offsets using pythagoreans theorem
-        # xAlignOff = self._alignDistmm * math.cos(goal.pose._rotation.angle_z.radians)
-        # yAlignOff = self._alignDistmm * math.sin(goal.pose._rotation.angle_z.radians)
-        # destSetup = cozmo.util.Pose(goal.pose.position.x - xAlignOff, goal.pose.position.y - yAlignOff, goal.pose.position.z, 
-        #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
-        # # dest = cozmo.util.Pose(xdelivOff, ydelivOff, goal.pose.position.z, 
-        # #                        angle_z=goal.pose._rotation.angle_z, origin_id=goal.pose._origin_id )
-        # # align Cozmo with the goal entrance
-        # await self._robot.go_to_pose(destSetup).wait_for_completed()
-        # #await self._robot.go_to_pose(dest).wait_for_completed()
-        # #enter goal and deliver
-        # await self._robot.drive_straight(cozmo.util.distance_mm(100), cozmo.util.speed_mmps(100)).wait_for_completed()
-        # await self.drop_cube()
-
-        print ("adjusted ang", (math.degrees(ang)-TurnAdjust))
-          # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
+            TA = self.TurnAdjust * -1
+        else:
+            TA = self.TurnAdjust
+        # Replacdrivign commands with a cust_drive_forward call
+        print("ang: ", math.degrees(ang))
+        print ("adjusted ang", (math.degrees(ang)-TA))
+        # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
         print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
         #drive.turn(robot, ang, 27, 1)
-        await self._robot.turn_in_place(cozmo.util.degrees((-(math.degrees(ang)-TurnAdjust)))).wait_for_completed()
+        await self._robot.turn_in_place(cozmo.util.degrees((-(math.degrees(ang)-TA)))).wait_for_completed()
         # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
         # await asyncio.sleep(0.05)
-        
-        self.cust_drive_forward(dist, 1)
-        await self._robot.set_lift_height(0).wait_for_completed
+        self._robot.drive_wheel_motors(100, 100, 0, 0)
+        # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+        # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
+        await asyncio.sleep(((dist * 1000)-40)/100)
+        self._robot.stop_all_motors()
+        await self._robot.set_lift_height(0).wait_for_completed()
+        await asyncio.sleep(1)
+        # robot.drive_wheel_motors(100, 100, 0, 0)
+        #   # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
+        #   # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
+        # time.sleep(((dist) + 37.5)/100)
+        self._robot.stop_all_motors()
         self.cust_drive_forward(-100, 1)
-        return
-    # end point is a cozmo pose
     '''  if return _to_start is set to true cozmo will Ignore the end point argument 
     and just return to his starting position if not given one '''
     async def moveCube(self, cbID, endpoint = cozmo.util.Pose(0,0, 0, angle_z=cozmo.util.degrees(0))):
@@ -243,12 +217,10 @@ class coz:
     but having finer grain control with low level motor functions will be nice, plus this solves the lifter problem)'''
     # takes in a distance in mm and travel time in sec, then travels the specified distance in the specified time
     def cust_drive_forward(self, dist_mm, time_sec):
-            # Note, research wise, manipulating time w be more impactful than speed, cosnider adding a way to just use distance and time
+            # Note, research wise, manipulating time will be more impactful than speed, cosnider adding a way to just use distance and time
             # using classic no accel physics here D/T = V
             # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
             # add 37.5 to the distance to make the refrence point from cozmo's center, thus staying consistant for the differential drive math
-          # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
-          # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
             speed_mm = (dist_mm)/time_sec
             print ("Calculated:", speed_mm)
             self._robot.drive_wheel_motors(speed_mm, speed_mm, 0, 0)
@@ -320,13 +292,13 @@ class coz:
         #print("lookthread: searching = ", detect_pipe.searching)
         while (detect_pipe.found == False):
             #print("detection pipe found status", detect_pipe.found)
-            self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
+            self._robot.turn_in_place(cozmo.util.degrees(30), cozmo.util.speed_mmps(10))
             await asyncio.sleep(1)
             if (detect_pipe.found == False):
-                self._robot.turn_in_place(cozmo.util.degrees(50), cozmo.util.speed_mmps(10))
+                self._robot.turn_in_place(cozmo.util.degrees(30), cozmo.util.speed_mmps(10))
             await  asyncio.sleep(1)
             if (detect_pipe.found == False):    
-                self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
+                self._robot.turn_in_place(cozmo.util.degrees(-10), cozmo.util.speed_mmps(10))
             await  asyncio.sleep(1)
 
         self._robot.stop_all_motors()
