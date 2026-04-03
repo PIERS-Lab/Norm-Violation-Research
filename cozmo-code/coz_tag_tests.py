@@ -346,4 +346,4 @@ async def approach_and_align_test(connection):
         return
 
 #cozmo.connect_with_tkviewer(demo_path_planning) 
-cozmo.connect_with_tkviewer(approach_and_align_test)  
+cozmo.connect_with_tkviewer(test_tag)  
