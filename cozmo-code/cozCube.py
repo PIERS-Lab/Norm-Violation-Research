@@ -62,9 +62,10 @@ class coz:
         self._detect_pipe = tag_pipe()
         # intilaze and launch detector thread
         self._threads = threadManager
+        self._detector = apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True))
         # create an apriltag detector class, which takes the cozmo image and reconizes the included tag
         time.sleep(0.5)
-        finder = threading.Thread(target = self._apriltag_finder, args = (apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe))
+        finder = threading.Thread(target = self._apriltag_finder, args = [self._detector, self._detect_pipe])
         finder.daemon=True
         finder.start()
         #self._threads.submit(self._apriltag_finder, apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe)
@@ -118,7 +119,7 @@ class coz:
         
         return found
     async def lift_cube(self, target):
-        await self._robot.dock_with_cube(target, num_retries=3, approach_angle=cozmo.util.degrees(0)).wait_for_completed()
+        await self._robot.dock_with_cube(target, num_retries=3, approach_angle=cozmo.util.degrees(90)).wait_for_completed()
         await self._robot.set_lift_height(1.0).wait_for_completed()
 
     async def drop_cube(self):
@@ -148,20 +149,25 @@ class coz:
 
         # let the robot find the goal before processing a pose
         goalIndex = None
-        scanner = 0
+        
         while (goalIndex is None):
-            await self.look_around_for_goal(self._detect_pipe)
+            scanner = 0
+            await self.look_around_for_goal(self._detect_pipe, goalNum)
             # search detections for the target
+            #print(self._detect_pipe.detect)
+            
             for det in self._detect_pipe.detect:
+                
                 if (det.tag_id == goalNum):
                     goalIndex = scanner
-                    break
+
                 scanner += 1
-                    
+        
         print("goal found!") 
+        tagPose = self._detector.detection_pose(self._detect_pipe.detect[goalIndex], self.cameraParams, 0.05, +1)
         goalPose = cozPose()
-        goalPose._x = self._detect_pipe.detect [0][0][3] - 0.13
-        goalPose._y = self._detect_pipe.detect [0][2][3]
+        goalPose._x = tagPose [0][0][3] - 0.13
+        goalPose._y = tagPose [0][2][3]
         
         return goalPose 
         # except asyncio.TimeoutError:
@@ -263,7 +269,7 @@ class coz:
             time.sleep(1)  
 
     def _apriltag_finder(self, detector, detect_pipe):
-        print(detect_pipe)
+       # print(detect_pipe)
         print("finder: active", detect_pipe.active)
         print("fidner: search", detect_pipe.searching)
         print("fidner: found", detect_pipe.found)
@@ -292,20 +298,21 @@ class coz:
                 detections = detector.detect(numpy.array(upscaled, dtype=numpy.uint8))
                 #print(detections)
                 if(detections and self._detect_pipe.searching and not self._detect_pipe.found):
-                    print("goal found")
+                    # print("goal found")
                     # stop searching, store data, and relay to the turn behavior that it's thread can terminate
-                    self._robot.stop_all_motors()
-                    detect_pipe.detect = detector.detection_pose(detections[0], self.cameraParams, 0.05, +1)
+                    detect_pipe.detect = detections
                     detect_pipe.found = True
+                else:
+                    detect_pipe.found = False
         print("finishing up")
         return
     #Specific behavior to allow cozmo to search for the goals using apriltag, normal cozmo behaviors should be used for other behaviors
     # this particular function being async allows an easy way to wait for the detection without complicating the info pipe.
-    async def look_around_for_goal(self, detect_pipe):
+    async def look_around_for_goal(self, detect_pipe, goalNum):
         print(detect_pipe)
         detect_pipe.searching = True
         #print("lookthread: searching = ", detect_pipe.searching)
-        while (detect_pipe.found == False):
+        while (True):
             #print("detection pipe found status", detect_pipe.found)
             self._robot.turn_in_place(cozmo.util.degrees(30), cozmo.util.speed_mmps(10))
             await asyncio.sleep(0.6)
@@ -314,7 +321,14 @@ class coz:
             await asyncio.sleep(0.6)
             if (detect_pipe.found == False):    
                self._robot.turn_in_place(cozmo.util.degrees(-10), cozmo.util.speed_mmps(10))
+            elif ((not(await self.verify_goal(goalNum)) == None)):
+                # Search until we find what we are looking for
+                print("goal found!")
+                await asyncio.sleep(0.6)
+                break
             await asyncio.sleep(0.6)
+            
+            
         self._robot.stop_all_motors()
         detect_pipe.searching = False
         return detect_pipe.detect
@@ -327,6 +341,25 @@ class coz:
             self._detect_pipe.imageNew = True
             # let the apriltag detector know that a new frame has come in
             self._detect_pipe.cond.notify()
+
+
+    #verify that the found goal is the target, if it was not seen, return None, if so return the index of the detection        
+    async def verify_goal(self, goalNum):
+        
+        goalIndex = None
+        scanner = 0
+        # search detections for the target
+        #print(self._detect_pipe.detect)
+        #print(goalNum, "in", self._detect_pipe.detect)    
+        for det in self._detect_pipe.detect:
+                    
+            if (det.tag_id == goalNum):
+                print("got it!")
+                goalIndex = scanner
+                break
+
+            scanner += 1
+        return goalIndex    
 
     
     
