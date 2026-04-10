@@ -15,7 +15,7 @@ import time
 import cozmo 
 from cozmo import *
 import cozmo.camera
-from cozmo.util import degrees
+from cozmo.util import distance_mm, degrees, speed_mmps 
 from cozmo.objects import CustomObjectMarkers
 import math
 from custom_pose_system.cozmoPose import cozPose
@@ -29,6 +29,7 @@ import time
 import numpy
 import math
 import threading
+DELIVER_OFFSET = 37.5
 class coz:
     # focal x, focal y, center x, center y
     cameraParams = {288.87, 288.36, 155.11, 111.40}
@@ -178,7 +179,7 @@ class coz:
     # This is effectively a go_to_Pose for apriltag points and can be used as such
     async def deliver(self, goalPose):
         print(goalPose)
-        # mult dist by 100 so dist is in mm
+        # mult dist by 1000 so dist is in mm (apriltags report pose in meters)
         dist = (math.sqrt((goalPose._x * goalPose._x) + (goalPose._y * goalPose._y))) * 1000
         ang = math.atan2(goalPose._x, goalPose._y)
         if(ang <= 0):
@@ -197,7 +198,8 @@ class coz:
 
         # # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
         # # add 37.5 to the distance to make the refrence point from cozmo's center, thus staying consitant for the differential drive math.
-        self.cust_drive_forward(dist - 37.5, 100)
+        self.cust_drive_forward(dist, 100)
+        #await self._robot.drive_straight(distance_mm(dist), speed_mmps(100)).wait_for_completed()
         # self._robot.drive_wheel_motors(100, 100, 0, 0)
         
         # await asyncio.sleep(((dist * 1000)-40)/100)
