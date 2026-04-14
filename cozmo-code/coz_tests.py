@@ -3,7 +3,7 @@
 import concurrent.futures
 from cozCube import coz
 import cozmo
-from cozmo import *
+from cozmo.util import distance_mm, degrees, speed_mmps 
 import concurrent
 import asyncio
 import threading
@@ -52,31 +52,6 @@ async def test_goal_approach(connection):
     goalPose = await testiee.find_goal(1)
     print(goalPose)
     await testiee.deliver(goalPose)
-    # dist = math.sqrt((goalPose._x * goalPose._x) + (goalPose._y * goalPose._y))
-    # ang = math.atan2(goalPose._x, goalPose._y)
-    # if(ang <= 0):
-    #     TA = TurnAdjust * -1
-    # else:
-    #     TA = TurnAdjust
-    # print("ang: ", math.degrees(ang))
-    # print ("adjusted ang", (math.degrees(ang)-TA))
-    # # note that the custom co-ords use right as the positive dir for both translation and rotation, so CLKwise is pos here
-    # print("Path Vector Magnitude: ", dist, " Angle ", math.degrees(ang))
-    # #drive.turn(robot, ang, 27, 1)
-    # await testiee._robot.turn_in_place(cozmo.util.degrees((-(math.degrees(ang)-TA)))).wait_for_completed()
-    # # await robot.drive_straight(cozmo.util.distance_mm(dist), cozmo.util.speed_mmps(100)).wait_for_completed()
-    # # await asyncio.sleep(0.05)
-    # testiee._robot.drive_wheel_motors(100, 100, 0, 0)
-    # # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
-    # # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
-    # await asyncio.sleep(((dist * 1000)-40)/100)
-    # testiee._robot.stop_all_motors()
-    # await testiee._robot.set_lift_height(0).wait_for_completed()
-    # await asyncio.sleep(1)
-    # # robot.drive_wheel_motors(100, 100, 0, 0)
-    # #   # there appears to be a consitant error in the pose accuracy, but this just so happens to work out as a natural goal offset, so yay?
-    # #   # add 37.5 to the distance to make the refremce point from cozmo's center, thus staying consitant for the differential drive math.
-    # # time.sleep(((dist) + 37.5)/100)
     testiee._robot.stop_all_motors() 
 
 async def test_deliver(connection):
@@ -103,6 +78,32 @@ async def test_deliver(connection):
     await testiee.deliver(goalPose)
     return
 
+async def test_game_deliver(connection):
+    print ("delivering cube 1 to goal 1")
+    targetCube = 1
+    threadPool = concurrent.futures.ThreadPoolExecutor(3)
+    testiee = await coz.create(await connection.wait_for_robot(), targetCube, threadPool)
+    threadPool.submit(threading.main_thread())
+    print(testiee._goals)
+    print("finding cube")
+    cube = await testiee.findCube(targetCube)
+    if(cube == False):
+        print("couldn't find cube!")
+        return
+    print ("finding goal")
+    
+    print("grabbing cube")
+    await testiee.lift_cube(cube)
+    await testiee._robot.drive_straight(distance_mm(-200), speed_mmps(100)).wait_for_completed()
+    goalPose = await testiee.find_goal(1)
+    if(goalPose == False):
+        print ("could not find goal")
+        return
+    print("delivering cube to goal")
+    print(goalPose)
+    await testiee.deliver(goalPose)
+    return
+
 async def test_return(connection):
     print("Testing Goal Identification with goal 1")
     testiee = await coz.create(await connection.wait_for_robot(), 1)
@@ -113,7 +114,7 @@ async def test_return(connection):
         print("couldn't find cube!")
         return
     print ("finding goal")
-    goalPose = await testiee.find_goal(1)
+    goalPose = await testiee.find_goal(2)
     if(goalPose == False):
         print ("could not find goal")
         return
@@ -125,5 +126,5 @@ async def test_return(connection):
     await testiee.reset_position()
     return
 
-
-cozmo.connect_with_tkviewer(test_deliver)
+# comzo may be missing goal due to cube vision?
+cozmo.connect(test_game_deliver)

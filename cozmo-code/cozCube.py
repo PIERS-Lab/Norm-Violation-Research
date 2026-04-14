@@ -155,7 +155,7 @@ class coz:
             scanner = 0
             await self.look_around_for_goal(self._detect_pipe, goalNum)
             # search detections for the target
-            #print(self._detect_pipe.detect)
+            print(self._detect_pipe.detect)
             
             for det in self._detect_pipe.detect:
                 
@@ -316,13 +316,13 @@ class coz:
         #print("lookthread: searching = ", detect_pipe.searching)
         while (True):
             #print("detection pipe found status", detect_pipe.found)
-            self._robot.turn_in_place(cozmo.util.degrees(30), cozmo.util.speed_mmps(10))
+            self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
             await asyncio.sleep(0.6)
             if (detect_pipe.found == False):
-                self._robot.turn_in_place(cozmo.util.degrees(30), cozmo.util.speed_mmps(10))
+                self._robot.turn_in_place(cozmo.util.degrees(-30), cozmo.util.speed_mmps(10))
             await asyncio.sleep(0.6)
             if (detect_pipe.found == False):    
-               self._robot.turn_in_place(cozmo.util.degrees(-10), cozmo.util.speed_mmps(10))
+               self._robot.turn_in_place(cozmo.util.degrees(10), cozmo.util.speed_mmps(10))
             elif ((not(await self.verify_goal(goalNum)) == None)):
                 # Search until we find what we are looking for
                 print("goal found!")
