@@ -80,11 +80,11 @@ async def test_deliver(connection):
 
 async def test_game_deliver(connection):
     print ("delivering cube 1 to goal 1")
-    targetCube = 1
+    targetCube = 2
     threadPool = concurrent.futures.ThreadPoolExecutor(3)
     testiee = await coz.create(await connection.wait_for_robot(), targetCube, threadPool)
     threadPool.submit(threading.main_thread())
-    print(testiee._goals)
+    await testiee._robot.drive_straight(distance_mm(200), speed_mmps(100)).wait_for_completed()
     print("finding cube")
     cube = await testiee.findCube(targetCube)
     if(cube == False):
@@ -95,7 +95,7 @@ async def test_game_deliver(connection):
     print("grabbing cube")
     await testiee.lift_cube(cube)
     await testiee._robot.drive_straight(distance_mm(-200), speed_mmps(100)).wait_for_completed()
-    goalPose = await testiee.find_goal(1)
+    goalPose = await testiee.find_goal(2)
     if(goalPose == False):
         print ("could not find goal")
         return

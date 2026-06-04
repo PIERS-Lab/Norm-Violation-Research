@@ -13,7 +13,6 @@ as the vehichle to implement the game, all needed functions and behaviors will b
 import asyncio 
 import time
 import cozmo 
-from cozmo import *
 import cozmo.camera
 from cozmo.util import distance_mm, degrees, speed_mmps 
 from cozmo.objects import CustomObjectMarkers
@@ -48,7 +47,7 @@ class coz:
     turnAdjust = 10
     # upon intitializaton, a new thread pool executor is created if none is given,
     # a ll robots should be in the same thread pool
-    def __init__ (self, robot, cube_Num, threadManager, pose = cozPose()):
+    def __init__ (self, robot: cozmo.robot.Robot, cube_Num, threadManager, pose = cozPose()):
         # robot is a cozmo.conn.cozmoConnection.robot.Robot object
         self._robot = robot
         self._cubeID = cube_Num
@@ -72,17 +71,17 @@ class coz:
         #self._threads.submit(self._apriltag_finder, apriltag.Detector(apriltag.DetectorOptions("tag36h11",border=1,quad_decimate=0, refine_edges=True)), self._detect_pipe)
     async def create(robot, cube_num, threadManager):
         self = coz(robot, cube_num, threadManager)
-        self._goals = [await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType01,
-                                              CustomObjectMarkers.Triangles5,
-                                              100, 120,
-                                              40, 40, True), 
-                                              await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType02,
-                                              CustomObjectMarkers.Circles5,
-                                              100, 120,
-                                              40, 40, True), await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType03,
-                                              CustomObjectMarkers.Hexagons5,
-                                              100, 120,
-                                              40, 40, True)]
+        # self._goals = [await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType01,
+        #                                       CustomObjectMarkers.Triangles5,
+        #                                       100, 120,
+        #                                       40, 40, True), 
+        #                                       await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType02,
+        #                                       CustomObjectMarkers.Circles5,
+        #                                       100, 120,
+        #                                       40, 40, True), await self._robot.world.define_custom_wall(cozmo.objects.CustomObjectTypes.CustomType03,
+        #                                       CustomObjectMarkers.Hexagons5,
+        #                                       100, 120,
+        #                                       40, 40, True)]
         # set up goal markers Goals are x by x by x (still wip) at their base, a wall is used due to other options being not suitable
         return self
     
@@ -272,9 +271,9 @@ class coz:
 
     def _apriltag_finder(self, detector, detect_pipe):
        # print(detect_pipe)
-        print("finder: active", detect_pipe.active)
-        print("fidner: search", detect_pipe.searching)
-        print("fidner: found", detect_pipe.found)
+        #print("finder: active", detect_pipe.active)
+        #print("fidner: search", detect_pipe.searching)
+        #print("fidner: found", detect_pipe.found)
         while (detect_pipe.active):
             time.sleep(0.2) 
             # print("fidner: search", detect_pipe.searching)
@@ -283,10 +282,11 @@ class coz:
             #print("fidner: search", detect_pipe.searching)
             # wait for the image stream to be fully active
             while(not self._robot.world.latest_image):
-                print("inactive...")
+                #print("inactive...")
                 time.sleep(0.1)
 
             # wait for image
+            #print("camera ready")
             with(self._detect_pipe.cond):
                 self._detect_pipe.cond.wait()          
                 # Cozmo gives it's images as a PIL.Image.Image object, It needs to be transformed into a GS numpy array
