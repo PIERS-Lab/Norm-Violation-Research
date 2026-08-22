@@ -7,17 +7,18 @@ using json = nlohmann::json;
 // this class sserves to organize the poses needed to pick and place and associate them with their respective object
 class armController {
     public:
-        armController( std::string intermPose, std:;string gripperRelease, std::string gripperClench. 
+        armController( std::string intermPose, std::string gripperRelease, std::string gripperClench, 
             moveit::planning_interface::MoveGroupInterface &armPlanner, moveit::planning_interface::MoveGroupInterface &gripperPlanner);
         void pick(json object);
         void place(json object);
         void go_to(json object);
         void leave(json object);
-        
+        void go_to_interm();
+
     private:
+        std::string intermPose;
         std::string gripperRelease;
         std::string gripperClench;
-        std::string intermPose;
-        moveit::planning_interface::MoveGroupInterface armPlanner; 
-        moveit::planning_interface::MoveGroupInterface gripperPlanner;
-}
+        moveit::planning_interface::MoveGroupInterface &armPlanner; 
+        moveit::planning_interface::MoveGroupInterface &gripperPlanner;
+};
