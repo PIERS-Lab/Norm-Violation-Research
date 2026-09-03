@@ -14,6 +14,8 @@ class armController {
         void go_to(json object);
         void leave(json object);
         void go_to_interm();
+        void go_to_sleep(); 
+
 
     private:
         std::string intermPose;

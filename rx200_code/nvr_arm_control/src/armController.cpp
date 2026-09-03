@@ -18,7 +18,10 @@ void armController::pick(json object) {
     armPlanner.move();
     gripperPlanner.setNamedTarget(gripperClench);
     gripperPlanner.move();
+    armPlanner.setNamedTarget(object["align"]);
+    armPlanner.move();
 }
+
 // IMPORTANT! The arm should already have picked before calling this!
 void armController::place(json goal)
 {
@@ -26,9 +29,8 @@ void armController::place(json goal)
     gripperPlanner.move();
     armPlanner.setNamedTarget(goal["align"]);
     armPlanner.move();
-    armPlanner.setNamedTarget(intermPose);
-    armPlanner.move();
 }
+
 void armController::go_to(json object)
 {
     armPlanner.setNamedTarget(object["align"]);
@@ -36,6 +38,7 @@ void armController::go_to(json object)
     armPlanner.setNamedTarget(object["approach"]);
     armPlanner.move();
 }
+
 void armController::leave(json object)
 {
     armPlanner.setNamedTarget(object["align"]);
@@ -44,11 +47,16 @@ void armController::leave(json object)
     armPlanner.move();
 }
 
-void armController::leave(json object)
+void armController::go_to_interm()
 {
     armPlanner.setNamedTarget(intermPose);
     armPlanner.move();
 }         
 
+void armController::go_to_sleep()
+{
+    armPlanner.setNamedTarget("Sleep");
+    armPlanner.move();
+}         
 
 

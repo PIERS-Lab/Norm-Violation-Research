@@ -36,9 +36,9 @@ def generate_launch_description():
     value_type=str
 )
     # 5. Build your custom test node and inject the clean data streams
-    pose_test_node = Node(
+    study_control_node = Node(
         package='nvr_arm_control',               # Your custom package name
-        executable='poseTest',                   # Your compiled executable target binary
+        executable='studyControl',                   # Your compiled executable target binary
         output='screen',                         
         parameters=[
             {'robot_description': robot_description_content},
@@ -48,5 +48,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        pose_test_node
+        study_control_node
     ])

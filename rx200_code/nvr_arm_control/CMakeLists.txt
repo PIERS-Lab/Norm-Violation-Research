@@ -10,25 +10,61 @@ find_package(ament_cmake REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(study_interfaces REQUIRED)
 add_executable(poseTest src/poseTest.cpp src/armController.cpp)
+add_executable(studyControl src/studyControl.cpp src/armController.cpp)
+add_executable(deliver src/deliver.cpp src/armController.cpp)
 target_include_directories(poseTest PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_features(poseTest PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_include_directories(studyControl PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(studyControl PUBLIC c_std_99 cxx_std_17)
+target_include_directories(deliver PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)  # Require C99 and C++17
+
+
 ament_target_dependencies(
   poseTest
   moveit_ros_planning_interface
   std_msgs
   geometry_msgs
 )
+
+
+ament_target_dependencies(
+  studyControl
+  rclcpp
+  rclcpp_action
+  moveit_ros_planning_interface
+  std_msgs
+  geometry_msgs
+  study_interfaces
+)
+
+ament_target_dependencies(
+  deliver
+  rclcpp
+  moveit_ros_planning_interface
+  std_msgs
+  geometry_msgs
+)
+
 # install exes
-install(TARGETS poseTest
+install(TARGETS poseTest studyControl deliver
   DESTINATION lib/${PROJECT_NAME}
-  
   )
 # install launch
 install(DIRECTORY launch 
+DESTINATION share/${PROJECT_NAME})
+
+#install config
+install(DIRECTORY config 
 DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)

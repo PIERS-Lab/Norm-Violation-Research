@@ -1,9 +1,10 @@
 import os
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import Command, PathJoinSubstitution
+from launch.substitutions import Command, PathJoinSubstitution, LaunchConfiguration
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
+from launch.actions import DeclareLaunchArgument
 
 def generate_launch_description():
     
@@ -13,7 +14,7 @@ def generate_launch_description():
 
     # 2. Safely find package directories using standard lazy substitutions
     interbotix_descriptions_share = FindPackageShare('interbotix_xsarm_descriptions')
-    interbotix_moveit_share = FindPackageShare('interbotix_xsarm_moveit')
+    interbotix_moveit_share = FindPackageShare('interbotix_xsarm_dual')
 
     # 3. Create lazy path mappings
     xacro_path = PathJoinSubstitution([interbotix_descriptions_share, 'urdf', f'{robot_model}.urdf.xacro'])
@@ -35,18 +36,25 @@ def generate_launch_description():
     Command(['xacro ', srdf_path]),
     value_type=str
 )
+    
+    deliv_config_arg = DeclareLaunchArgument("config", default_value="d11", description="the config for the delivery, robot([l]eft or [r]ight) type ([d]eliver or [r]eset), object location ('1', '2', or '3'), and goal ('1', '2', or '3')")
+    deliv_config_value = LaunchConfiguration('config')
     # 5. Build your custom test node and inject the clean data streams
-    pose_test_node = Node(
+    deliver_node = Node(
         package='nvr_arm_control',               # Your custom package name
-        executable='poseTest',                   # Your compiled executable target binary
+        executable='deliver',                   # Your compiled executable target binary
         output='screen',                         
         parameters=[
             {'robot_description': robot_description_content},
             {'robot_description_semantic': robot_description_semantic_content},
-            kinematics_yaml_path
+            kinematics_yaml_path,
+            {'deliv_config_arg': deliv_config_value}
         ]
     )
 
+    deliv_config_arg = DeclareLaunchArgument("config", default_value="d11", description="the config for the delivery, type (deliver or reset), object location ('1', '2', or '3'), and goal ('1', '2', or '3')")
+    deliv_config_value = LaunchConfiguration('deliver_config_value')
     return LaunchDescription([
-        pose_test_node
+        deliv_config_arg,
+        deliver_node
     ])

@@ -1,0 +1,97 @@
+
+
+
+
+#include <memory>
+#include <rclcpp/rclcpp.hpp>
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <geometry_msgs/msg/pose.hpp>
+#include <fstream>
+#include <thread>
+#include <iostream>
+#include "armController.hpp"
+#include "json.hpp"
+#define INTERM_POSE "intermAlign"
+#define GRIPPER_OPEN "lightRelease"
+#define GRIPPER_CLOSED "objGripped"
+
+
+// this program is for perfoming one delivery based off of launch args
+int main(int argc, char * argv[])
+{   
+  // Initialize ROS
+  rclcpp::init(argc, argv);  
+  // Create the Node
+  auto const node = std::make_shared<rclcpp::Node>("deliveryNode");
+  /*configuration for the delivery,task (d or r (delivery/reset)) -> object postion -> goal position*/ 
+  node->declare_parameter<std::string>("deliv_config_arg");
+  
+  auto logger = rclcpp::get_logger("deliv");
+
+  // FIX 1: Use a MultiThreadedExecutor so MoveIt callbacks aren't blocked by the main thread
+  auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+  executor->add_node(node);
+  
+  // Spin the multi-threaded executor in a background thread
+  std::thread spinner([executor]() { executor->spin(); });  
+
+ 
+  // Scope MoveIt interfaces so they are destroyed BEFORE ROS shutdown
+  std::string config = node->get_parameter("deliv_config_arg").as_string();
+  {
+    std::cout << ("executing with " + config + "\n");
+    using moveit::planning_interface::MoveGroupInterface;
+    
+    auto arm_planning_interface = MoveGroupInterface(node, "interbotix_arm");
+    auto gripper_planning_interface = MoveGroupInterface(node, "interbotix_gripper");
+    // Setup the control object
+    auto arm = armController(INTERM_POSE, GRIPPER_OPEN, GRIPPER_CLOSED, arm_planning_interface, gripper_planning_interface);
+
+    // Parse json for object set
+    std::ifstream poses_raw("/home/ws/src/nvr_arm_control/src/poses.json");
+    json poses = json::parse(poses_raw);
+
+    // Start in a favorable position to avoid collisions
+    arm_planning_interface.setNamedTarget(INTERM_POSE);
+    arm_planning_interface.move();
+    RCLCPP_INFO(logger, std::string("executing with " + config).c_str());
+    switch (config[0])
+    {
+        case 'd':
+            // Pick and Place sequence
+            arm.pick(poses[std::string("obj") + config[1]]);
+            arm.leave(poses[std::string("obj") + config[1]]);
+            arm.go_to(poses[std::string("goal") + config[2]]);
+            arm.place(poses[std::string("goal") + config[2]]);
+            arm.leave(poses[std::string("goal") + config[2]]);
+            break;
+        
+        case 'r':
+            // Test accuracy by doing the same in reverse
+            arm.pick(poses[std::string("goal") + config[2]]);
+            arm.leave(poses[std::string("goal") + config[2]]);
+            arm.go_to(poses[std::string("obj") + config[1]]);
+            arm.place(poses[std::string("obj") + config[1]]);
+            arm.leave(poses[std::string("obj") + config[1]]);
+            break;
+            
+        default:
+            RCLCPP_WARN(logger, "argument malformed, doing nothing\n");
+    }
+    // // Go back to rest
+    arm.go_to_interm();
+    // arm_planning_interface.setNamedTarget("Sleep");
+    // arm_planning_interface.move();
+  }
+
+  
+  executor->cancel();
+  if (spinner.joinable())
+  {
+    spinner.join();
+  }
+
+  // Shutdown ROS safely
+  rclcpp::shutdown();
+  return 0;
+}
