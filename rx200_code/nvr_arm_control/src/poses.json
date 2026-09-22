@@ -1,0 +1,31 @@
+{
+    "obj1" : {
+        "approach" : "Obj1", 
+        "align" : "Obj1align"
+    },
+
+    "obj2" : {
+        "approach" : "Obj2", 
+        "align" : "Obj2align"
+    },
+
+    "obj3" : {
+        "approach" : "Obj3", 
+        "align" : "Obj3align"
+    },
+
+    "goal1" : {
+        "approach" : "goal1", 
+        "align" : "goal1align"
+    },
+
+    "goal2" : {
+        "approach" : "goal2", 
+        "align" : "goal2align"
+    },
+
+    "goal3" : {
+        "approach" : "goal3", 
+        "align" : "goal3align"
+    }
+}
