@@ -1,0 +1,231 @@
+<?xml version="1.0" ?>
+<!--This does not replace URDF, and is not an extension of URDF.
+    This is a format for representing semantic information about the robot structure.
+    A URDF file must exist for this robot as well, where the joints and the links that are referenced are defined
+-->
+<robot name="rx200" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!--GROUPS - Representation of a set of joints and links. This can be useful for specifying DOF to plan for, defining arms, end effectors, etc-->
+    <!--LINKS - When a link is specified, the parent joint of that link (if it exists) is automatically included-->
+    <!--JOINTS - When a joint is specified, the child link of that joint (which will always exist) is automatically included-->
+    <!--CHAINS - When a chain is specified, all the links along the chain (including endpoints) are included in the group. Additionally, all the joints that are parents to included links are also included. This means that joints along the chain and the parent joint of the base link are included in the group-->
+    <!--SUBGROUPS - Groups can also be formed by referencing to already defined group names-->
+    <xacro:arg name="robot_name" default="rx200"/>
+    <xacro:arg name="base_link_frame" default="base_link"/>
+    <xacro:arg name="show_ar_tag" default="false"/>
+    <xacro:arg name="external_srdf_loc" default=""/>
+
+    <xacro:property name="srdf_loc" value="$(arg external_srdf_loc)"/>
+
+    <group name="interbotix_arm">
+        <joint name="waist" />
+        <joint name="shoulder" />
+        <joint name="elbow" />
+        <joint name="wrist_angle" />
+        <joint name="wrist_rotate" />
+        <joint name="ee_arm" />
+        <joint name="gripper_bar" />
+        <joint name="ee_bar" />
+        <joint name="ee_gripper" />
+    </group>
+    <group name="interbotix_gripper">
+        <link name="$(arg robot_name)/left_finger_link" />
+        <link name="$(arg robot_name)/right_finger_link" />
+    </group>
+    <!--GROUP STATES - Purpose - Define a named state for a particular group, in terms of joint values. This is useful to define states like 'folded arms'-->
+    <group_state name="Home" group="interbotix_arm">
+        <joint name="elbow" value="0" />
+        <joint name="shoulder" value="0" />
+        <joint name="waist" value="0" />
+        <joint name="wrist_angle" value="0" />
+        <joint name="wrist_rotate" value="0" />
+    </group_state>
+    <group_state name="Upright" group="interbotix_arm">
+        <joint name="elbow" value="-1.5708" />
+        <joint name="shoulder" value="0" />
+        <joint name="waist" value="0" />
+        <joint name="wrist_angle" value="0" />
+        <joint name="wrist_rotate" value="0" />
+    </group_state>
+    <group_state name="Sleep" group="interbotix_arm">
+        <joint name="elbow" value="1.55" />
+        <joint name="shoulder" value="-1.85" />
+        <joint name="waist" value="0" />
+        <joint name="wrist_angle" value="0.8" />
+        <joint name="wrist_rotate" value="0" />
+    </group_state>
+    <group_state name="Grasping" group="interbotix_gripper">
+        <joint name="left_finger" value="0.015" />
+        <joint name="right_finger" value="-0.015" />
+    </group_state>
+    <group_state name="Released" group="interbotix_gripper">
+        <joint name="left_finger" value="0.037" />
+        <joint name="right_finger" value="-0.037" />
+    </group_state>
+    <group_state name="Home" group="interbotix_gripper">
+        <joint name="left_finger" value="0.0195" />
+        <joint name="right_finger" value="-0.0195" />
+    </group_state>
+    <!--NEW STATES FOR STUDY-->
+    <group_state name="intermAlign" group="interbotix_arm">
+        <joint name="elbow" value="0.8375535607337952" />
+        <joint name="shoulder" value="0.03834952041506767" />
+        <joint name="waist" value="1.0507768392562866" />
+        <joint name="wrist_angle" value="1.366776943206787" />
+        <joint name="wrist_rotate" value="-0.07669904083013535" />
+    </group_state>
+
+     <group_state name="Obj1align" group="interbotix_arm">
+        <joint name="elbow" value="0.8375535607337952" />
+        <joint name="shoulder" value="-0.5921165943145752" />
+        <joint name="waist" value="1.3790488243103027" />
+        <joint name="wrist_angle" value="1.2686021327972412" />
+        <joint name="wrist_rotate" value="1.4081944227218628" />
+    </group_state>
+
+    <group_state name="Obj1" group="interbotix_arm">
+        <joint name="elbow" value="1.0615147352218628" />
+        <joint name="shoulder" value="-0.36968937516212463" />
+        <joint name="waist" value="1.3775148391723633" />
+        <joint name="wrist_angle" value="0.8298836350440979" />
+        <joint name="wrist_rotate" value="1.4035924673080444" />
+    </group_state>
+
+     <group_state name="Obj2align" group="interbotix_arm">
+        <joint name="elbow" value="0.401425727959" />
+        <joint name="shoulder" value="-0.279252680319" />
+        <joint name="waist" value="1.43116998664" />
+        <joint name="wrist_angle" value="1.36135681656" />
+        <joint name="wrist_rotate" value="1.57079632679" />
+    </group_state>
+
+    <group_state name="Obj2" group="interbotix_arm">
+        <joint name="elbow" value="0.680678408278" />
+        <joint name="shoulder" value="-0.0698131700798" />
+        <joint name="waist" value="1.43116998664" />
+        <joint name="wrist_angle" value="0.872664625997" />
+        <joint name="wrist_rotate" value="1.57079632679" />
+    </group_state>
+
+     <group_state name="Obj3align" group="interbotix_arm">
+        <joint name="elbow" value="0" />
+        <joint name="shoulder" value="0.12217304764" />
+        <joint name="waist" value="1.3962634016" />
+        <joint name="wrist_angle" value="1.36135681656" />
+        <joint name="wrist_rotate" value="-0.0349065850399" />
+    </group_state>
+
+    <group_state name="Obj3" group="interbotix_arm">
+        <joint name="elbow" value="0.226892802759" />
+        <joint name="shoulder" value="0.279252680319" />
+        <joint name="waist" value="1.3962634016" />
+        <joint name="wrist_angle" value="0.994837673637" />
+        <joint name="wrist_rotate" value="-0.0349065850399" />
+    </group_state>
+
+    
+
+    <group_state name="goal1align" group="interbotix_arm">
+        <joint name="elbow" value="0.35895150899887085" />
+        <joint name="shoulder" value="-0.2485048919916153" />
+        <joint name="waist" value="0.6550098061561584" />
+        <joint name="wrist_angle" value="1.5217089653015137" />
+        <joint name="wrist_rotate" value="0.5660389065742493" />        
+    </group_state>
+
+    <group_state name="goal1" group="interbotix_arm">
+        <joint name="elbow" value="0.7102331519126892" />
+        <joint name="shoulder" value="-0.07669904083013535" />
+        <joint name="waist" value="0.6427379846572876"/>
+        <joint name="wrist_angle" value="0.9572040438652039" />
+        <joint name="wrist_rotate" value="0.5675728917121887" />     
+    </group_state>
+
+   <group_state name="goal2align" group="interbotix_arm">
+        <joint name="elbow" value="-0.157079632679" />
+        <joint name="shoulder" value="0.13962634016" />
+        <joint name="waist" value="0.925024503557" />
+        <joint name="wrist_angle" value="1.65806278939" />
+        <joint name="wrist_rotate" value="0.977384381117" />
+    </group_state>
+
+    <group_state name="goal2" group="interbotix_arm">
+        <joint name="elbow" value="0.261799387799" />
+        <joint name="shoulder" value="0.226892802759" />
+        <joint name="waist" value="0.925024503557" />
+        <joint name="wrist_angle" value="1.15191730632" />
+        <joint name="wrist_rotate" value="0.977384381117" />
+    </group_state>
+
+
+    <group_state name="goal3align" group="interbotix_arm">
+        <joint name="elbow" value="-1.11701072128" />
+        <joint name="shoulder" value="0.767944870878" />
+        <joint name="waist" value="1.06465084372" />
+        <joint name="wrist_angle" value="1.86750229963" />
+        <joint name="wrist_rotate" value="1.02974425868" />    
+    </group_state>
+
+    <group_state name="goal3" group="interbotix_arm">
+        <joint name="elbow" value="-0.645771823238" />
+        <joint name="shoulder" value="0.733038285838" />
+        <joint name="waist" value="1.0645827054977417" />
+        <joint name="wrist_angle" value="1.51843644924" />
+        <joint name="wrist_rotate" value="1.02974425868" />    
+    </group_state>
+
+
+    <group_state name="objGripped" group="interbotix_gripper">
+       <joint name="left_finger" value="0.027" />
+       <joint name="right_finger" value="-0.027" />
+    </group_state>
+
+    <group_state name="lightRelease" group="interbotix_gripper">
+       <joint name="left_finger" value="0.035" />
+       <joint name="right_finger" value="-0.035" />
+    </group_state>
+
+
+    <!--END EFFECTOR - Purpose - Represent information about an end effector.-->
+    <end_effector name="interbotix_gripper" parent_link="$(arg robot_name)/ee_gripper_link" group="interbotix_gripper" />
+    <!--DISABLE COLLISIONS - By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
+    <disable_collisions link1="$(arg robot_name)/$(arg base_link_frame)" link2="$(arg robot_name)/shoulder_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/forearm_link" link2="$(arg robot_name)/gripper_bar_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/forearm_link" link2="$(arg robot_name)/gripper_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/forearm_link" link2="$(arg robot_name)/gripper_prop_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/forearm_link" link2="$(arg robot_name)/left_finger_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/forearm_link" link2="$(arg robot_name)/right_finger_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/forearm_link" link2="$(arg robot_name)/upper_arm_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/forearm_link" link2="$(arg robot_name)/wrist_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/gripper_bar_link" link2="$(arg robot_name)/gripper_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/gripper_bar_link" link2="$(arg robot_name)/gripper_prop_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/gripper_bar_link" link2="$(arg robot_name)/left_finger_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/gripper_bar_link" link2="$(arg robot_name)/right_finger_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/gripper_bar_link" link2="$(arg robot_name)/wrist_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/gripper_link" link2="$(arg robot_name)/gripper_prop_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/gripper_link" link2="$(arg robot_name)/left_finger_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/gripper_link" link2="$(arg robot_name)/right_finger_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/gripper_link" link2="$(arg robot_name)/wrist_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/gripper_prop_link" link2="$(arg robot_name)/left_finger_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/gripper_prop_link" link2="$(arg robot_name)/right_finger_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/gripper_prop_link" link2="$(arg robot_name)/wrist_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/left_finger_link" link2="$(arg robot_name)/right_finger_link" reason="Adjacent" />
+    <disable_collisions link1="$(arg robot_name)/left_finger_link" link2="$(arg robot_name)/wrist_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/right_finger_link" link2="$(arg robot_name)/wrist_link" reason="Never" />
+    <disable_collisions link1="$(arg robot_name)/shoulder_link" link2="$(arg robot_name)/upper_arm_link" reason="Adjacent" />
+
+    <xacro:if value="$(arg show_ar_tag)">
+      <disable_collisions link1="$(arg robot_name)/ar_tag_link" link2="$(arg robot_name)/forearm_link" reason="Never" />
+      <disable_collisions link1="$(arg robot_name)/ar_tag_link" link2="$(arg robot_name)/gripper_bar_link" reason="Adjacent" />
+      <disable_collisions link1="$(arg robot_name)/ar_tag_link" link2="$(arg robot_name)/gripper_link" reason="Adjacent" />
+      <disable_collisions link1="$(arg robot_name)/ar_tag_link" link2="$(arg robot_name)/gripper_prop_link" reason="Adjacent" />
+      <disable_collisions link1="$(arg robot_name)/ar_tag_link" link2="$(arg robot_name)/left_finger_link" reason="Never" />
+      <disable_collisions link1="$(arg robot_name)/ar_tag_link" link2="$(arg robot_name)/right_finger_link" reason="Never" />
+      <disable_collisions link1="$(arg robot_name)/ar_tag_link" link2="$(arg robot_name)/wrist_link" reason="Never" />
+    </xacro:if>
+
+    <xacro:if value="${srdf_loc != ''}">
+      <xacro:include filename="${srdf_loc}"/>
+    </xacro:if>
+
+</robot>
+

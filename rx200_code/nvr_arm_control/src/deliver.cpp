@@ -37,23 +37,9 @@ int main(int argc, char * argv[])
   {
     std::cout << ("executing with " + config + "\n");
     using moveit::planning_interface::MoveGroupInterface;
-    std::string robot_name;
-    if(config[0] == 'r')
-    {
-      robot_name = "robot_2";
-    }
-    else
-    // default to left roobt if the input is improper
-    {
-      robot_name = "robot_1";
-    }
-    // Specify more of the options to ensure the proper robot is being run
-    auto opts = moveit::planning_interface::MoveGroupInterface::Options 
-    ("interbotix_arm", "robot_description", "/" + robot_name);
-    auto arm_planning_interface = MoveGroupInterface(node, opts);
-    opts = moveit::planning_interface::MoveGroupInterface::Options 
-    ("interbotix_gripper", "robot_description", "/" + robot_name);
-    auto gripper_planning_interface = MoveGroupInterface(node, opts);
+    
+    auto arm_planning_interface = MoveGroupInterface(node, "interbotix_arm");
+    auto gripper_planning_interface = MoveGroupInterface(node, "interbotix_gripper");
     // Setup the control object
     auto arm = armController(INTERM_POSE, GRIPPER_OPEN, GRIPPER_CLOSED, arm_planning_interface, gripper_planning_interface);
 
@@ -65,24 +51,24 @@ int main(int argc, char * argv[])
     arm_planning_interface.setNamedTarget(INTERM_POSE);
     arm_planning_interface.move();
     RCLCPP_INFO(logger, std::string("executing with " + config).c_str());
-    switch (config[1])
+    switch (config[0])
     {
         case 'd':
             // Pick and Place sequence
-            arm.pick(poses[std::string("obj") + config[2]]);
-            arm.leave(poses[std::string("obj") + config[2]]);
-            arm.go_to(poses[std::string("goal") + config[3]]);
-            arm.place(poses[std::string("goal") + config[3]]);
-            arm.leave(poses[std::string("goal") + config[3]]);
+            arm.pick(poses[std::string("obj") + config[1]]);
+            arm.leave(poses[std::string("obj") + config[1]]);
+            arm.go_to(poses[std::string("goal") + config[2]]);
+            arm.place(poses[std::string("goal") + config[2]]);
+            arm.leave(poses[std::string("goal") + config[2]]);
             break;
         
         case 'r':
             // Test accuracy by doing the same in reverse
-            arm.pick(poses[std::string("goal") + config[3]]);
-            arm.leave(poses[std::string("goal") + config[3]]);
-            arm.go_to(poses[std::string("obj") + config[2]]);
-            arm.place(poses[std::string("obj") + config[2]]);
-            arm.leave(poses[std::string("obj") + config[2]]);
+            arm.pick(poses[std::string("goal") + config[2]]);
+            arm.leave(poses[std::string("goal") + config[2]]);
+            arm.go_to(poses[std::string("obj") + config[1]]);
+            arm.place(poses[std::string("obj") + config[1]]);
+            arm.leave(poses[std::string("obj") + config[1]]);
             break;
             
         default:

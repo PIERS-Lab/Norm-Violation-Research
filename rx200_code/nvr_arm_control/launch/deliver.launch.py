@@ -1,5 +1,4 @@
 import os
-import xacro
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.substitutions import Command, PathJoinSubstitution, LaunchConfiguration
@@ -8,59 +7,53 @@ from launch_ros.parameter_descriptions import ParameterValue
 from launch.actions import DeclareLaunchArgument
 
 def generate_launch_description():
+    
+    # 1. Define your specific Interbotix robot model 
+    # (e.g., 'wx200', 'px150', 'rx200', 'vx300', etc.)
     robot_model = 'rx200' 
-    
-    # 1. Target the correct macro and configuration paths
-    study_xacro = '/home/ws/src/nvr_arm_control/config/studyarms.srdf.xacro'
-    
-    # Pre-render the custom SRDF xacro macro into memory text right now
-    compiled_srdf = xacro.process_file(study_xacro)
-    
-    # Write to a stable location for logging/MoveIt tracking references
-    temp_static_srdf = '/tmp/generatedSRDF.srdf'
-    with open(temp_static_srdf, 'w') as f:
-        f.write(compiled_srdf.toxml())
 
-    # 2. Resolve package share names cleanly (Fixes the share-name crash)
+    # 2. Safely find package directories using standard lazy substitutions
     interbotix_descriptions_share = FindPackageShare('interbotix_xsarm_descriptions')
-    interbotix_dual_share = FindPackageShare('interbotix_xsarm_dual')
-    
-    kinematics_yaml_path = PathJoinSubstitution([interbotix_dual_share, 'config', 'kinematics.yaml'])
-    base_urdf_xacro = PathJoinSubstitution([interbotix_descriptions_share, 'urdf', f'{robot_model}.urdf.xacro'])
+    interbotix_moveit_share = FindPackageShare('interbotix_xsarm_moveit')
 
-    # 3. Use ParameterValue to map data structures cleanly into the runtime trees
+    # 3. Create lazy path mappings
+    xacro_path = PathJoinSubstitution([interbotix_descriptions_share, 'urdf', f'{robot_model}.urdf.xacro'])
+    srdf_path = PathJoinSubstitution([
+    interbotix_moveit_share, 
+    'config', 
+    'srdf',                   # <-- Added missing 'srdf' folder level
+    f'{robot_model}.srdf.xacro' # <-- Added missing .xacro extension
+])
+    kinematics_yaml_path = PathJoinSubstitution([interbotix_moveit_share, 'config', 'kinematics.yaml'])
+
+    # 4. Use ParameterValue to cleanly evaluate text commands inside the parameter tree
     robot_description_content = ParameterValue(
-        Command(['xacro ', base_urdf_xacro, ' use_world_frame:=true']),
+        Command(['xacro ', xacro_path, ' use_world_frame:=true']),
         value_type=str
     )
 
-    # Inject the pre-processed dual-arm XML targets string directly into the parameter
     robot_description_semantic_content = ParameterValue(
-        compiled_srdf.toxml(),
-        value_type=str
-    )
+    Command(['xacro ', srdf_path]),
+    value_type=str
+)
     
-    # 4. Declare your custom task orchestration argument flags (Fixes duplicates)
-    deliv_config_arg = DeclareLaunchArgument(
-        "config", 
-        default_value="ld11", 
-        description="Delivery behavior sequence config parameter (e.g. d11, r22)"
-    )
+    deliv_config_arg = DeclareLaunchArgument("config", default_value="d11", description="the config for the delivery, robot([l]eft or [r]ight) type ([d]eliver or [r]eset), object location ('1', '2', or '3'), and goal ('1', '2', or '3')")
     deliv_config_value = LaunchConfiguration('config')
-    
-    # 5. Build your custom test execution node with pristine configuration arrays
+    # 5. Build your custom test node and inject the clean data streams
     deliver_node = Node(
-        package='nvr_arm_control',               
-        executable='deliver',                   
+        package='nvr_arm_control',               # Your custom package name
+        executable='deliver',                   # Your compiled executable target binary
         output='screen',                         
         parameters=[
             {'robot_description': robot_description_content},
             {'robot_description_semantic': robot_description_semantic_content},
             kinematics_yaml_path,
-            {'deliv_config_arg': deliv_config_value} # Pass the parameter seamlessly to your C++ logic
+            {'deliv_config_arg': deliv_config_value}
         ]
     )
 
+    deliv_config_arg = DeclareLaunchArgument("config", default_value="d11", description="the config for the delivery, type (deliver or reset), object location ('1', '2', or '3'), and goal ('1', '2', or '3')")
+    deliv_config_value = LaunchConfiguration('deliver_config_value')
     return LaunchDescription([
         deliv_config_arg,
         deliver_node

@@ -1,0 +1,3 @@
+-The folder with the docker setup is named ".devcontainer" since it is hidden it will not immediately appear in the terminal so make sure to use ls -a 
+-This setup is based off of using the VScode devcontainers extension, if you just want to run it on your own, make sure to replicate the relevant settings in devcontainer.json when running the container.
+-finally, make sure to to edit the username in devcontainer.json if you want the enviornment to be more personalized
