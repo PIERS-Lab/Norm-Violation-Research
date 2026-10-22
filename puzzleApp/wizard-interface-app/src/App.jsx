@@ -2,18 +2,17 @@ import { useState } from 'react'
 import './App.css'
 import FileInput from './components/FileInput'
 import Button from './components/Button'
+import SubmitBox from './components/submitBox'
 const HOSTSERVER = "http://localhost:3000/state"
-
 // async function name(params) {
   
 // }
 
-
-
-
-
 function App() {
   const [puzzle, setPuzzle] = useState(null)
+  const [hscore, setHScore] = useState(0)
+  const [r1score, setR1Score] = useState(0)
+  const [r2score, setR2Score] = useState(0)
   // async function updateData()
   // {
   //   console.log("button press!");
@@ -37,9 +36,9 @@ function App() {
   const formData = new FormData();
 
   formData.append("puzzle", puzzle);
-  formData.append("hscore", 10);
-  formData.append("r1score", 20);
-  formData.append("r2score", 30);
+  formData.append("humanScore", hscore);
+  formData.append("leftRobotScore", r1score);
+  formData.append("rightRobotScore", r2score);
 
   console.log("Sending:", puzzle);
 
@@ -59,15 +58,40 @@ function App() {
   
   
   // const [count, setCount] = useState(0)
-  let hScore = 10, r1Score = 20, r2Score = 30
   return <>
   <FileInput onFileSelect = {setPuzzle}/>
-  <button onClick={updateData}>update display</button>  
+  <SubmitBox labeltext = "Human score" setvalue = {setHScore} />
+  <SubmitBox labeltext = "Left robot score" setvalue = {setR1Score} defaultvalue = "0"/> 
+  <SubmitBox labeltext = "Right robot score" setvalue = {setR2Score} defaultvalue = "0"/>  
+  <button onClick={updateData}>update display</button> 
+
   </> 
 
 }
 
 export default App
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // export default App
 
 

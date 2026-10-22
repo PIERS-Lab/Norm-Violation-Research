@@ -8,16 +8,19 @@ const upload = multer({dest: "uploads/"});
 const cors = require("cors");
 // create the server itself using express
 const app = express();
-// Tells the server to chack and parse json files whenever a request come in
-let currentState = {hscore: 0, lrscore:0, rrscore:0, msg: "raw"};
+// Tells the server to check and parse json files whenever a request come in
+const path = require("path")
+let currentOrder = null;
 app.use(cors({
-  origin: 'http://localhost:5173'
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://10.248.13.162:5173', 'http://10.248.13.162:5174']
 }));
 app.use(express.json());
+// tells the server to look through the given directory when someone makes a request of that type
+app.use("/puzzles", express.static(path.join(__dirname, "uploads")));
 // tells the server what to do when recieving data, empty means it'll only run on startup.
-app.listen(3000, () => {console.log("server running!");});
+
 app.use((req, res, next) => {
-    console.log("incoming request", req.method, req.url);
+    // console.log("incoming request", req.method, req.url);
     next();
 });
 
@@ -26,9 +29,8 @@ app.get("/", (req, res) =>{
 });
 
 app.get("/state", (req, res) => {
-    res.send("here!")
+    res.json(currentOrder)
 });
-
 
 app.post("/state", upload.single("puzzle"), (req, res) => {
     console.log("Received upload!")
@@ -38,10 +40,14 @@ app.post("/state", upload.single("puzzle"), (req, res) => {
 
     console.log("Other data:")
     console.log(req.body)
-
-    res.status(200).json({
+    img = req.file
+    currentOrder = {
         message: "Data received",
-        file: req.file?.originalname,
+        img_url: `/puzzles/${req.file.filename}`,
+        // body containes lscore, rscore, and hscore
         body: req.body
-    })
+    }
+    res.status(200).json(currentOrder)
 })
+
+app.listen(3000, () => {console.log("server running!");});
