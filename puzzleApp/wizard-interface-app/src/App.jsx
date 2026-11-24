@@ -3,10 +3,8 @@ import './App.css'
 import FileInput from './components/FileInput'
 import Button from './components/Button'
 import SubmitBox from './components/submitBox'
-const HOSTSERVER = "http://localhost:3000/state"
-// async function name(params) {
-  
-// }
+const HOSTSERVER = "http://10.116.28.103:3000/state"
+//const HOSTSERVER = "http://0.0.0.0:3000/state"
 
 function App() {
   const [puzzle, setPuzzle] = useState(null)

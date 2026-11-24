@@ -11,8 +11,11 @@ const app = express();
 // Tells the server to check and parse json files whenever a request come in
 const path = require("path")
 let currentOrder = null;
+// Host '0.0.0.0 will simply route this to the network interfaces rather than local host.
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://10.248.13.162:5173', 'http://10.248.13.162:5174']
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://10.116.28.103:5174', 'http://10.116.28.103:5173']
 }));
 app.use(express.json());
 // tells the server to look through the given directory when someone makes a request of that type
@@ -50,4 +53,4 @@ app.post("/state", upload.single("puzzle"), (req, res) => {
     res.status(200).json(currentOrder)
 })
 
-app.listen(3000, () => {console.log("server running!");});
+app.listen(PORT, HOST, () => {console.log(`server running on http://10.116.28.103:3000:${PORT}!`);});

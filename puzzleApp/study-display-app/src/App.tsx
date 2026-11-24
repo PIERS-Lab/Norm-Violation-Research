@@ -2,7 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import { useQuery } from '@tanstack/react-query'
 
-const HOSTSERVER = "http://localhost:3000"
+const HOSTSERVER = "http://10.116.28.103:3000"
 // Constructs the blocks for any sub-elements.
   function SubHeader({ text })
 {
@@ -52,7 +52,7 @@ function App() {
   { /* div is a formatless directive, use if you want to make a custom object */ }
   <div className='titleHead'>
         Big Delivery Co.
-    </div> 
+  </div> 
   <div style={{ display: 'flex', flexDirection: 'row' }}>
     {/* First Column */}
     <div className={'column'}>
