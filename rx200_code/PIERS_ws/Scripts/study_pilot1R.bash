@@ -23,18 +23,18 @@ read -p "Press anything to return"
 ros2 launch nvr_arm_control deliver.launch.py config:=r12
 wait
 
-echo "Binary (doing tangible appropriation)"
+echo "Cryptic"
 read -p "Press anything to begin"
-ros2 launch nvr_arm_control deliver.launch.py config:=d23
+ros2 launch nvr_arm_control deliver.launch.py config:=d32
 wait   
 read -p "Press anything to return"
-ros2 launch nvr_arm_control deliver.launch.py config:=r23
+ros2 launch nvr_arm_control deliver.launch.py config:=r32
 wait
 
-echo "Misorder"
+echo "misorder1 (Tangible Violation, offender)" 
 read -p "Press anything to begin"
-ros2 launch nvr_arm_control deliver.launch.py config:=d22
+ros2 launch nvr_arm_control deliver.launch.py config:=d33
 wait   
 read -p "Press anything to return"
-ros2 launch nvr_arm_control deliver.launch.py config:=r22
+ros2 launch nvr_arm_control deliver.launch.py config:=r33
 wait

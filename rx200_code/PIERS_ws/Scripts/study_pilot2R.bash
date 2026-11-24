@@ -1,13 +1,5 @@
-echo "Demo Configuration 1(Right)!"
-echo "Verbose"
-read -p "Press anything to begin"
-ros2 launch nvr_arm_control deliver.launch.py config:=d31
-wait   
-read -p "Press anything to return"
-ros2 launch nvr_arm_control deliver.launch.py config:=r31
-wait
-
-echo "Ceasar"
+echo "Demo Configuration 2(Right)!"
+echo "Verbose1"
 read -p "Press anything to begin"
 ros2 launch nvr_arm_control deliver.launch.py config:=d33
 wait   
@@ -15,12 +7,28 @@ read -p "Press anything to return"
 ros2 launch nvr_arm_control deliver.launch.py config:=r33
 wait
 
-echo "Base"
+echo "Ceasar"
 read -p "Press anything to begin"
-ros2 launch nvr_arm_control deliver.launch.py config:=d21
+ros2 launch nvr_arm_control deliver.launch.py config:=d12
 wait   
 read -p "Press anything to return"
-ros2 launch nvr_arm_control deliver.launch.py config:=r21
+ros2 launch nvr_arm_control deliver.launch.py config:=r12
+wait
+
+echo "Base1"
+read -p "Press anything to begin"
+ros2 launch nvr_arm_control deliver.launch.py config:=d13
+wait   
+read -p "Press anything to return"
+ros2 launch nvr_arm_control deliver.launch.py config:=r13
+wait
+
+echo "Binary (Task Appropriation)"
+read -p "Press anything to begin"
+ros2 launch nvr_arm_control deliver.launch.py config:=d31
+wait   
+read -p "Press anything to return"
+ros2 launch nvr_arm_control deliver.launch.py config:=r31
 wait
 
 echo "Misorder"
@@ -30,9 +38,3 @@ wait
 read -p "Press anything to return"
 ros2 launch nvr_arm_control deliver.launch.py config:=r22
 wait
-
-echo "Braille (task-based appropriation)" 
-read -p "Press anything to begin"
-ros2 launch nvr_arm_control deliver.launch.py config:=d21   
-read -p "Press anything to return"
-ros2 launch nvr_arm_control deliver.launch.py config:=r21
