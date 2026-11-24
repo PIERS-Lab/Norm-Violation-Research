@@ -60,6 +60,7 @@ int main(int argc, char * argv[])
             arm.go_to(poses[std::string("goal") + config[2]]);
             arm.place(poses[std::string("goal") + config[2]]);
             arm.leave(poses[std::string("goal") + config[2]]);
+	          arm.go_to_sleep();
             break;
         
         case 'r':
@@ -69,19 +70,16 @@ int main(int argc, char * argv[])
             arm.go_to(poses[std::string("obj") + config[1]]);
             arm.place(poses[std::string("obj") + config[1]]);
             arm.leave(poses[std::string("obj") + config[1]]);
+	          arm.go_to_sleep();
             break;
             
         default:
             RCLCPP_WARN(logger, "argument malformed, doing nothing\n");
+            break;
     }
-    // // Go back to rest
-    arm.go_to_interm();
-    // arm_planning_interface.setNamedTarget("Sleep");
-    // arm_planning_interface.move();
+    
+    
   }
-
-  
-  executor->cancel();
   if (spinner.joinable())
   {
     spinner.join();
@@ -90,4 +88,5 @@ int main(int argc, char * argv[])
   // Shutdown ROS safely
   rclcpp::shutdown();
   return 0;
+
 }

@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/home/PIERS-Lab/interbotix_ws/install/moveit_visual_tools/include/**",
+                "/home/PIERS-Lab/interbotix_ws/install/interbotix_xs_rviz/include/**",
+                "/home/PIERS-Lab/interbotix_ws/install/interbotix_xs_ros_control/include/**",
+                "/home/PIERS-Lab/interbotix_ws/install/interbotix_xs_msgs/include/**",
+                "/home/PIERS-Lab/interbotix_ws/install/interbotix_xs_driver/include/**",
+                "/home/PIERS-Lab/interbotix_ws/install/interbotix_perception_msgs/include/**",
+                "/home/PIERS-Lab/interbotix_ws/install/interbotix_moveit_interface_msgs/include/**",
+                "/home/PIERS-Lab/interbotix_ws/install/dynamixel_workbench_toolbox/include/**",
+                "/home/PIERS-Lab/apriltag_ws/install/apriltag_ros/include/**",
+                "/opt/ros/humble/include/**",
+                "/home/ws/src/nvr_arm_control/include/**",
+                "/usr/include/**",
+                "/usr/include/eigen3"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}
